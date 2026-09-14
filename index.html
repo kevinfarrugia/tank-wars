@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#191233">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon-64.png" sizes="64x64" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tank Wars">
+<meta name="description" content="Artillery duel for up to eight tanks. Angle, power, wind, and an armory full of bad ideas.">
+<title>Tank Wars</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--night:#191233;--panel:#120d26;--edge:#2e2551;--ink:#f3ead9;--dim:#9a8fbd;
+        --hot:#e8a13c;--cash:#8fd694}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none}
+  body{background:var(--night);color:var(--ink);
+    font-family:"Barlow Semi Condensed",Avenir Next Condensed,Roboto Condensed,system-ui,sans-serif;
+    font-variant-numeric:tabular-nums;touch-action:none;user-select:none;-webkit-user-select:none}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+
+  /* ---- rotate gate ---- */
+  #rotate{display:none;position:fixed;inset:0;z-index:99;background:var(--panel);
+    align-items:center;justify-content:center;text-align:center;padding:26px}
+  #rotate .ico{font-size:52px;line-height:1;color:var(--hot);animation:tip 2.4s ease-in-out infinite}
+  #rotate .big{font-size:26px;font-weight:700;margin-top:14px}
+  #rotate .sub{font-size:15px;color:var(--dim);margin-top:6px;line-height:1.4}
+  @keyframes tip{0%,60%,100%{transform:rotate(0)}30%{transform:rotate(90deg)}}
+  @media (orientation:portrait) and (max-width:900px){
+    #rotate{display:flex}
+    #app{visibility:hidden}
+  }
+  @media (prefers-reduced-motion:reduce){#rotate .ico{animation:none}}
+
+  /* ---- top strip ---- */
+  #strip{flex:0 0 auto;background:var(--panel);border-bottom:1px solid var(--edge);padding:5px 10px 6px}
+  #topline{display:flex;align-items:center;gap:10px}
+  #who{flex:1 1 auto;min-width:0;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #who b{font-weight:500;color:var(--cash);margin-left:8px}
+  #rnd{flex:0 0 auto;font-size:12px;color:var(--dim)}
+  #windbox{flex:0 0 94px;text-align:right}
+  #windnum{font-size:13px;font-weight:700;line-height:1}
+  #windnum span{font-size:11px;font-weight:500;color:var(--dim)}
+  #gauge{position:relative;height:5px;margin-top:3px;background:#251c45;border-radius:3px}
+  #gauge::after{content:"";position:absolute;left:50%;top:-2px;width:1px;height:9px;background:#5a4d8c}
+  #gfill{position:absolute;top:0;height:100%;background:var(--hot);border-radius:3px;width:0;left:50%;
+    transition:width .4s ease,left .4s ease}
+  #menubtn{flex:0 0 auto;background:#1d1640;border:1px solid var(--edge);border-radius:8px;
+    color:var(--dim);font-family:inherit;font-size:12px;font-weight:600;padding:4px 9px;cursor:pointer}
+  #menubtn:disabled{opacity:.4}
+  #roster{display:flex;gap:5px;margin-top:4px}
+  .chip{flex:1 1 0;min-width:0;opacity:.55}
+  .chip.on{opacity:1}
+  .chip.dead{opacity:.22}
+  .chip .tag{display:block;font-size:10px;font-weight:600;color:var(--c);line-height:1.1;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip .mini{height:5px;border-radius:3px;background:#251c45;margin-top:2px;overflow:hidden}
+  .chip .mini i{display:block;height:100%;background:var(--c);transition:width .25s ease}
+  .chip.on .mini{box-shadow:0 0 0 1px var(--c)}
+
+  #field{position:relative;flex:1 1 auto;min-height:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  #msg{position:absolute;left:50%;top:10px;transform:translateX(-50%);padding:5px 13px;border-radius:999px;
+    background:rgba(18,13,38,.85);border:1px solid var(--edge);font-size:13px;font-weight:600;
+    white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none}
+  #msg.on{opacity:1}
+
+  /* ---- one-row controls for landscape ---- */
+  #ctrl{flex:0 0 auto;display:flex;gap:8px;align-items:center;
+    padding:7px 10px;background:var(--panel);border-top:1px solid var(--edge)}
+  #armbtn{display:flex;align-items:center;flex:1 1 150px;min-width:110px;background:#1d1640;
+    border:1px solid var(--edge);border-radius:10px;color:var(--ink);font-family:inherit;
+    font-size:14px;font-weight:600;padding:8px 10px;cursor:pointer;text-align:left}
+  #armbtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #armbtn i{font-style:normal;color:var(--dim);font-weight:500;margin-left:auto;padding-left:7px;
+    white-space:nowrap;font-size:12px}
+  #skip{flex:0 0 52px;background:#1d1640;border:1px solid var(--edge);border-radius:10px;color:var(--dim);
+    font-family:inherit;font-size:13px;font-weight:600;padding:8px 2px;cursor:pointer}
+  .dial{flex:1 1 170px;display:flex;align-items:center;gap:7px;min-width:130px}
+  .dial label{flex:0 0 auto;font-size:12px;color:var(--dim);font-weight:500}
+  .dial output{flex:0 0 40px;font-size:15px;font-weight:700;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;flex:1 1 auto;min-width:0;height:30px;background:transparent;margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#2b2150}
+  input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:#2b2150}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;
+    margin-top:-10px;background:var(--ink);border:3px solid var(--panel);box-shadow:0 1px 4px rgba(0,0,0,.5)}
+  input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--ink);
+    border:3px solid var(--panel);box-shadow:0 1px 4px rgba(0,0,0,.5)}
+  input[type=range]:disabled{opacity:.45}
+  input[type=range]:focus-visible{outline:2px solid var(--hot);outline-offset:4px;border-radius:6px}
+  #fire{flex:0 0 88px;border:0;border-radius:12px;cursor:pointer;background:var(--hot);
+    color:#2a1605;font-family:inherit;font-size:18px;font-weight:700;padding:10px 0}
+  #fire:active{transform:translateY(1px)}
+  #fire:disabled{opacity:.35}
+  button:focus-visible{outline:2px solid var(--hot);outline-offset:3px}
+
+  .sheet{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
+    background:rgba(12,8,28,.95);backdrop-filter:blur(4px);padding:12px 16px}
+  .sheet.hide{display:none}
+  .scroll{flex:1 1 auto;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+  h1.logo{margin:0;font-size:clamp(26px,6vw,42px);font-weight:700;letter-spacing:-.01em;line-height:.95;text-align:center}
+  h1.logo em{font-style:normal;color:var(--hot)}
+  .lead{margin:4px 0 8px;font-size:13px;color:var(--dim);text-align:center}
+  .cols{display:flex;gap:18px;align-items:flex-start}
+  .cols>div{flex:1 1 0;min-width:0}
+  .frow{display:flex;align-items:center;gap:8px;margin:8px 0 4px}
+  .frow>span{flex:0 0 56px;font-size:13px;color:var(--dim)}
+  .seg{flex:1 1 auto;display:flex;gap:4px}
+  .seg button{flex:1 1 0;min-width:0;border:1px solid var(--edge);background:#1d1640;color:var(--ink);
+    font-family:inherit;font-size:13px;font-weight:600;padding:7px 2px;border-radius:8px;cursor:pointer}
+  .seg button.on{background:var(--hot);color:#2a1605;border-color:transparent}
+  #plist{border-top:1px solid var(--edge)}
+  .prow{display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid #1f1940}
+  .prow .dot{flex:0 0 10px;height:10px;border-radius:3px;background:var(--c)}
+  .prow .nm{flex:0 0 52px;font-size:13px;font-weight:600;color:var(--c)}
+  .prow .seg button{font-size:12px;padding:6px 1px}
+  .prow .seg button.on{background:var(--c);color:#14102a}
+  .btn{border:1px solid var(--edge);background:#1d1640;color:var(--ink);font-family:inherit;
+    font-size:16px;font-weight:600;padding:11px 18px;border-radius:11px;cursor:pointer;width:100%}
+  .btn.primary{background:var(--hot);color:#2a1605;border-color:transparent}
+  .btn.danger{border-color:#7a3a45;color:#ff9a8f}
+  .btn+.btn{margin-top:7px}
+  .foot{flex:0 0 auto;padding-top:8px;display:flex;gap:8px}
+  .foot .btn+.btn{margin-top:0}
+  .note{font-size:12px;color:#6f659a;line-height:1.45;text-align:center;margin:8px 0}
+  .note b{color:var(--ink);font-weight:600}
+
+  #shop{border-top:5px solid var(--c)}
+  #buyer{flex:0 0 auto;display:flex;align-items:center;gap:9px}
+  #buyer .dot{flex:0 0 22px;height:22px;border-radius:6px;background:var(--c)}
+  #buyer .nm{flex:1 1 auto;min-width:0;font-size:21px;font-weight:700;color:var(--c);line-height:1.05;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #buyer .money{font-size:20px;font-weight:700;color:var(--cash)}
+  #buyersub{flex:0 0 auto;font-size:12px;color:var(--dim);margin:2px 0 6px}
+  .shead{flex:0 0 auto;display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .shead h2{margin:0;font-size:21px;font-weight:700;line-height:1}
+  .shead .money{margin-left:auto;font-size:19px;font-weight:700;color:var(--cash)}
+  .list{flex:1 1 auto;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;
+    border-top:1px solid var(--edge)}
+  .row{display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid #1f1940;cursor:pointer}
+  .row .info{flex:1 1 auto;min-width:0}
+  .row .ttl{font-size:15px;font-weight:600;line-height:1.15}
+  .row .ttl u{text-decoration:none;color:var(--dim);font-weight:500;margin-left:7px;font-size:13px}
+  .row .sub{font-size:12px;color:#7d72a8;line-height:1.3;margin-top:1px}
+  .row .buy{flex:0 0 auto;border:1px solid var(--edge);background:#1d1640;color:var(--ink);font-family:inherit;
+    font-size:14px;font-weight:600;padding:7px 10px;border-radius:9px;cursor:pointer;min-width:80px}
+  .row .buy.ok{border-color:#3c7a45;color:var(--cash)}
+  .row .buy:disabled{opacity:.35}
+  .row.sel{background:#1b1440}
+  .row.out{opacity:.42}
+  .score{display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid #1f1940}
+  .score .pos{flex:0 0 20px;font-size:13px;color:var(--dim)}
+  .score .nm{flex:1 1 auto;min-width:0;font-size:15px;font-weight:600;color:var(--c);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .score .kv{flex:0 0 auto;font-size:13px;color:var(--dim)}
+  .score .kv b{color:var(--ink);font-weight:700;margin-left:4px}
+
+  #turncard{align-items:center;justify-content:center;text-align:center;background:rgba(12,8,28,.9);cursor:pointer}
+  #turncard .kicker{font-size:14px;color:var(--dim);letter-spacing:.04em}
+  #turncard .big{font-size:clamp(28px,7vw,52px);font-weight:700;line-height:1;color:var(--c);margin:5px 0}
+  #turncard .sub{font-size:15px;color:var(--dim)}
+  #turncard .tap{margin-top:14px;font-size:12px;color:#6f659a}
+</style>
+</head>
+<body>
+<div id="rotate">
+  <div>
+    <div class="ico">&#8635;</div>
+    <div class="big">Rotate your device</div>
+    <div class="sub">Tank Wars is played in landscape.</div>
+  </div>
+</div>
+
+<div id="app">
+  <div id="strip">
+    <div id="topline">
+      <div id="who">&nbsp;</div>
+      <div id="rnd">Round 1/5</div>
+      <div id="windbox">
+        <div id="windnum">0 <span>wind</span></div>
+        <div id="gauge"><div id="gfill"></div></div>
+      </div>
+      <button id="menubtn">Menu</button>
+    </div>
+    <div id="roster"></div>
+  </div>
+
+  <div id="field">
+    <canvas id="game"></canvas>
+    <div id="msg"></div>
+
+    <div class="sheet" id="setup">
+      <h1 class="logo">Tank<em>Wars</em></h1>
+      <p class="lead">Up to eight tanks, last one standing takes the round.</p>
+      <div class="scroll">
+        <div class="cols">
+          <div>
+            <div class="frow"><span>Tanks</span><div class="seg" id="pcount"></div></div>
+            <div class="frow"><span>Rounds</span><div class="seg" id="rcount"></div></div>
+            <div class="note" id="storenote"></div>
+          </div>
+          <div id="plist"></div>
+        </div>
+      </div>
+      <div class="foot">
+        <button class="btn" id="installbtn" style="display:none">Install</button>
+        <button class="btn" id="resumebtn" style="display:none">Resume saved match</button>
+        <button class="btn primary" id="startbtn">Start match</button>
+      </div>
+    </div>
+
+    <div class="sheet hide" id="shop">
+      <div id="buyer"><div class="dot"></div><div class="nm" id="buyname"></div>
+        <div class="money" id="shopcash">$0</div></div>
+      <div id="buyersub"></div>
+      <div class="list" id="shoplist"></div>
+      <div class="foot"><button class="btn primary" id="shopdone">Start round</button></div>
+    </div>
+
+    <div class="sheet hide" id="pick">
+      <div class="shead"><h2>Arsenal</h2><span class="money" id="pickcash">$0</span></div>
+      <div class="list" id="picklist"></div>
+      <div class="foot"><button class="btn" id="pickclose">Close</button></div>
+    </div>
+
+    <div class="sheet hide" id="board">
+      <div class="shead"><h2 id="boardttl">Round over</h2><span class="who2" id="boardsub2"
+        style="font-size:13px;color:var(--dim)"></span></div>
+      <div class="list" id="boardlist"></div>
+      <div class="foot"><button class="btn primary" id="boardnext">Go to the armory</button></div>
+    </div>
+
+    <div class="sheet hide" id="menu">
+      <div class="shead"><h2>Menu</h2></div>
+      <div class="scroll"><div class="note" id="saveinfo"></div></div>
+      <div class="foot">
+        <button class="btn primary" id="mBack">Back to the game</button>
+        <button class="btn" id="mFull">Full screen</button>
+        <button class="btn danger" id="mResign">Resign this round</button>
+        <button class="btn" id="mQuit">Abandon match</button>
+      </div>
+    </div>
+
+    <div class="sheet hide" id="turncard">
+      <div class="kicker">Up next</div>
+      <div class="big" id="tcName">Player 1</div>
+      <div class="sub" id="tcSub"></div>
+      <div class="tap">tap to continue</div>
+    </div>
+  </div>
+
+  <div id="ctrl">
+    <button id="armbtn"><span>Incinerator</span><i>unlimited</i></button>
+    <button id="skip">Skip</button>
+    <div class="dial"><label for="ang">Angle</label>
+      <input id="ang" type="range" min="0" max="180" step="1" value="45" aria-label="Turret angle">
+      <output id="angv">45&deg;</output></div>
+    <div class="dial"><label for="pow">Power</label>
+      <input id="pow" type="range" min="5" max="100" step="1" value="65" aria-label="Shot power">
+      <output id="powv">65</output></div>
+    <button id="fire">Fire</button>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ================= constants ================= */
+const WW = 1000;
+let worldH = 600, scale = 1, dpr = 1;
+const G = 160, MAXWIND = 32, SPEED = 4.6, CRI_SPEED = 5;   // CRI rounds fly far faster
+const START_CASH = 1000, CASH_PER_HP = 8, KILL_BASE = 1000;
+const FALLOFF = 0.5;              // <1 keeps near misses punishing
+
+const cvs = document.getElementById("game");
+const ctx = cvs.getContext("2d");
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const Y = y => worldH - y;
+const money = n => "$" + Math.round(n).toLocaleString("en-US");
+
+/* ================= saved game ================= */
+const SAVE_KEY = "tankwars.save.v2";
+const store = (() => {
+  let mem = null, ok = false;
+  try {
+    localStorage.setItem(SAVE_KEY + ".probe", "1");
+    localStorage.removeItem(SAVE_KEY + ".probe");
+    ok = true;
+  } catch (e) { ok = false; }
+  return {
+    ok,
+    get() { try { return ok ? localStorage.getItem(SAVE_KEY) : mem; } catch (e) { return mem; } },
+    set(v) { mem = v; try { if (ok) localStorage.setItem(SAVE_KEY, v); } catch (e) {} },
+    clear() { mem = null; try { if (ok) localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+  };
+})();
+
+/* ================= armory =================
+   D rounds dig craters, ND rounds leave the landscape alone.
+   CRI shells travel several times faster than a normal shell. */
+const WEAPONS = [
+  { id:"incin",  name:"Incinerator",         price:0,    pack:0, kind:"blast", r:38,  dmg:45,  rank:1,
+    desc:"Free and unlimited. Your ranging shot." },
+  { id:"dirt",   name:"Ball o' Dirt",        price:200,  pack:5, kind:"dirt",  r:44,  dmg:0,   rank:0,
+    desc:"Drops a ball of earth. A tank caught under it is lifted onto the top." },
+  { id:"incin2", name:"Mark II Incinerator", price:300,  pack:5, kind:"blast", r:60,  dmg:75,  rank:2,
+    desc:"The same shell with a much heavier charge." },
+  { id:"dirt2",  name:"Mark II Dirt",        price:600,  pack:3, kind:"dirt",  r:82,  dmg:0,   rank:0,
+    desc:"A boulder of earth. Good cover until somebody blows it apart." },
+  { id:"cri4",   name:"CRI 4/D",             price:700,  pack:4, kind:"cri",   r:62,  dmg:80,  rank:3,
+    desc:"Fast round on a flat trajectory. Digs its own crater." },
+  { id:"kilo20", name:"20 Kilo Nuke",        price:1000, pack:2, kind:"nuke",  r:100, dmg:120, rank:4,
+    desc:"A small warhead with a very generous blast radius." },
+  { id:"cri8",   name:"CRI 8/D",             price:1400, pack:3, kind:"cri",   r:98,  dmg:130, rank:5,
+    desc:"Heavier CRI. Still arrives before the wind can do much to it." },
+  { id:"mirv",   name:"MIRV",                price:1800, pack:2, kind:"mirv",  r:54,  dmg:70,  rank:5,
+    desc:"Splits into five warheads at the top of its arc." },
+  { id:"cri20",  name:"CRI 20/ND",           price:2500, pack:2, kind:"cri",   r:150, dmg:175, rank:6,
+    desc:"The big CRI, non-destructive. Wrecks tanks and leaves the ground intact." },
+  { id:"meg5",   name:"5 Meg Nuke",          price:4000, pack:1, kind:"nuke",  r:190, dmg:200, rank:7,
+    desc:"Clears a quarter of the map. Make sure you are not standing in it." }
+];
+const W = {};
+for (const w of WEAPONS) W[w.id] = w;
+const MIRVLET = { id:"mirvlet", name:"MIRV warhead", kind:"blast", r:56, dmg:75, rank:0 };
+
+const COLORS = [
+  ["#4fd1e0","#1d6e7c"], ["#ffcf4d","#8a6410"], ["#ff7a6b","#8e3226"], ["#9be36d","#417a2c"],
+  ["#c79bff","#5c3a92"], ["#ff9ad5","#8f3f6c"], ["#7aa8ff","#2f4f96"], ["#f4e7c8","#8a7f68"]
+];
+const DIFF = {
+  easy:   { label:"Easy",   err:1.9, decay:0.92, armAt:0.25, smart:false,
+            names:["Rusty","Clanker","Wobbly Pete","Tin Can","Scrapheap","Dented Dan","Old Sputter","Cross-Eyed Cliff"] },
+  medium: { label:"Medium", err:1.0, decay:0.62, armAt:0.55, smart:false,
+            names:["Sergeant Steel","Ironside","Gunner Greta","Steady Hand","Bravo Unit","Corporal Cinder","Flint","Ranger"] },
+  hard:   { label:"Hard",   err:0.45, decay:0.32, armAt:1.2, smart:true,
+            names:["Widowmaker","Overkill","Iron Reaper","Deathwatch","Annihilator","Havoc","Judgement","Grave Digger"] }
+};
+
+/* ================= state ================= */
+let T = new Float32Array(WW + 1);        // bedrock height per column
+let SURF = new Float32Array(WW + 1);     // bedrock combined with the dirt balls
+let blobs = [];
+let tanks = [], turn = 0, wind = 0, windTurns = 0;
+let round = 1, roundsTotal = 5;
+let state = "setup";
+let shells = [], parts = [], smoke = [], puffs = [], shocks = [], balls = [], flashes = [], pending = [];
+let settleClock = 0, flyClock = 0, sky = null, shake = 0;
+let turnDamage = 0, turnCash = 0, shopQueue = [], cardTimer = null, cardDone = null;
+let lastBoardSub = "", phase = "turn", savedAt = 0;
+let cfgCount = 2, cfgKind = ["human","medium","medium","medium","medium","medium","medium","medium"];
+
+/* ================= canvas ================= */
+function resize() {
+  const r = cvs.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cvs.width = Math.round(r.width * dpr);
+  cvs.height = Math.round(r.height * dpr);
+  scale = r.width / WW;
+  worldH = r.height / scale;
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+  sky = null;
+  if (state === "setup") makeTerrain();
+  else { rebuildSurface(); for (const t of tanks) t.y = Math.min(t.y, worldH - 40); }
+}
+
+/* ================= terrain ================= */
+function makeTerrain() {
+  const n = 512, h = new Float32Array(n + 1), mid = worldH * 0.32;
+  h[0] = mid * rnd(0.6, 1.2); h[n] = mid * rnd(0.6, 1.2);
+  let step = n, rough = worldH * 0.38;
+  while (step > 1) {
+    const half = step >> 1;
+    for (let i = half; i < n; i += step) h[i] = (h[i - half] + h[i + half]) / 2 + rnd(-rough, rough);
+    rough *= 0.54; step = half;
+  }
+  for (let x = 0; x <= WW; x++) {
+    const t = x / WW * n, i = Math.floor(t), f = t - i;
+    T[x] = clamp(h[i] + (h[Math.min(n, i + 1)] - h[i]) * f, worldH * 0.07, worldH * 0.66);
+  }
+  for (let k = 0; k < 2; k++) {
+    const c = T.slice();
+    for (let x = 1; x < WW; x++) T[x] = (c[x - 1] + 2 * c[x] + c[x + 1]) / 4;
+  }
+  blobs = [];
+  rebuildSurface();
+}
+function rebuildSurface() {
+  SURF.set(T);
+  for (const b of blobs) {
+    const x0 = Math.max(0, Math.floor(b.x - b.r)), x1 = Math.min(WW, Math.ceil(b.x + b.r));
+    for (let i = x0; i <= x1; i++) {
+      const dx = i - b.x, d2 = b.r * b.r - dx * dx;
+      if (d2 <= 0) continue;
+      const top = b.y + Math.sqrt(d2);
+      if (top > SURF[i]) SURF[i] = top;
+    }
+  }
+}
+function ground(x) {
+  if (x <= 0) return SURF[0];
+  if (x >= WW) return SURF[WW];
+  const i = Math.floor(x), f = x - i;
+  return SURF[i] + (SURF[i + 1] - SURF[i]) * f;
+}
+function bedrock(x) {
+  if (x <= 0) return T[0];
+  if (x >= WW) return T[WW];
+  const i = Math.floor(x), f = x - i;
+  return T[i] + (T[i + 1] - T[i]) * f;
+}
+function flatten(x) {
+  const c = Math.round(clamp(x, 0, WW)), v = T[c];
+  for (let i = c - 16; i <= c + 16; i++) if (i >= 0 && i <= WW) T[i] = v;
+}
+function carve(cx, cy, r) {
+  const x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(WW, Math.ceil(cx + r));
+  for (let i = x0; i <= x1; i++) {
+    const dx = i - cx, d2 = r * r - dx * dx;
+    if (d2 <= 0) continue;
+    T[i] = Math.max(0, Math.min(T[i], cy - Math.sqrt(d2)));
+  }
+  // dirt balls are chipped away by the same blast and vanish once small enough
+  for (let i = blobs.length - 1; i >= 0; i--) {
+    const b = blobs[i], d = Math.hypot(b.x - cx, b.y - cy);
+    if (d < r + b.r) {
+      b.r -= (r + b.r - d) * 0.85;
+      if (b.r < 12) {
+        for (let k = 0; k < 14; k++) parts.push({ x: b.x, y: b.y, vx: rnd(-110, 110), vy: rnd(30, 150),
+          life: rnd(.4, 1), s: rnd(3, 6), col: "#8a6a4a" });
+        blobs.splice(i, 1);
+      }
+    }
+  }
+  rebuildSurface();
+}
+function dropBall(cx, cy, r) {
+  cy = Math.max(cy, bedrock(cx) - r * 0.2);
+  blobs.push({ x: cx, y: cy, r });
+  rebuildSurface();
+}
+
+/* ================= tanks ================= */
+function buildTanks() {
+  tanks = [];
+  const used = { easy: [], medium: [], hard: [] };
+  for (let i = 0; i < cfgCount; i++) {
+    const [col, dark] = COLORS[i];
+    const kind = cfgKind[i];
+    let name, short, diff = null;
+    if (kind === "human") { name = "Player " + (i + 1); short = "P" + (i + 1); }
+    else {
+      diff = DIFF[kind];
+      const pool = diff.names.filter(n => used[kind].indexOf(n) < 0);
+      name = pool.length ? pick(pool) : diff.names[i % diff.names.length] + " " + (i + 1);
+      used[kind].push(name);
+      short = name.split(" ")[0];
+    }
+    tanks.push({ i, col, dark, cpu: kind !== "human", kind, diff, name, short,
+      x: 0, y: 0, hp: 100, angle: 45, power: 65, vy: 0, err: 1,
+      cash: START_CASH, ammo: {}, sel: "incin", wins: 0, kills: 0, roundKills: 0, dead: false });
+  }
+}
+function placeTanks() {
+  const n = tanks.length, slot = (WW - 120) / n;
+  const order = tanks.map((t, i) => i).sort(() => Math.random() - 0.5);
+  for (let k = 0; k < n; k++) {
+    const t = tanks[order[k]];
+    t.x = Math.round(60 + slot * k + slot * 0.5 + rnd(-slot * 0.28, slot * 0.28));
+    flatten(t.x);
+  }
+  rebuildSurface();
+  for (const t of tanks) {
+    t.y = ground(t.x); t.vy = 0; t.hp = 100; t.dead = false; t.roundKills = 0;
+    t.angle = t.x < WW / 2 ? 45 : 135; t.power = 65;
+    t.err = t.diff ? t.diff.err : 1;
+  }
+}
+/* tanks never end up inside the ground: anything above them lifts them out */
+function seatTanks() {
+  for (const t of tanks) {
+    if (t.hp <= 0) continue;
+    const g = ground(t.x);
+    if (t.y < g) { t.y = g; t.vy = 0; }
+  }
+}
+function muzzle(t) {
+  const a = t.angle * Math.PI / 180;
+  return { x: t.x + Math.cos(a) * 26, y: t.y + 10 + Math.sin(a) * 26 };
+}
+const have = (t, id) => id === "incin" ? Infinity : (t.ammo[id] || 0);
+function ensureAmmo(t) { if (have(t, t.sel) <= 0) t.sel = "incin"; }
+const alive = () => tanks.filter(t => t.hp > 0);
+
+/* ================= drawing ================= */
+function paint() {
+  ctx.clearRect(0, 0, WW, worldH);
+  if (!sky) {
+    sky = ctx.createLinearGradient(0, 0, 0, worldH);
+    sky.addColorStop(0, "#191233"); sky.addColorStop(0.42, "#3b2354");
+    sky.addColorStop(0.72, "#a8446f"); sky.addColorStop(1, "#e8a13c");
+  }
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, WW, worldH);
+
+  ctx.save();
+  if (shake > 0.1) ctx.translate(rnd(-shake, shake), rnd(-shake, shake));
+
+  ctx.globalAlpha = 0.5; ctx.fillStyle = "#ffd79a";
+  ctx.beginPath(); ctx.arc(WW * 0.78, worldH * 0.84, 42, 0, 7); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  ctx.beginPath(); ctx.moveTo(0, Y(T[0]));
+  for (let x = 2; x <= WW; x += 2) ctx.lineTo(x, Y(T[x]));
+  ctx.lineTo(WW, worldH); ctx.lineTo(0, worldH); ctx.closePath();
+  ctx.fillStyle = "#43342b"; ctx.fill();
+  ctx.lineWidth = 5; ctx.strokeStyle = "#c9a05e"; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(0, Y(T[0]));
+  for (let x = 2; x <= WW; x += 2) ctx.lineTo(x, Y(T[x]));
+  ctx.stroke();
+
+  for (const b of blobs) {
+    ctx.fillStyle = "#43342b";
+    ctx.beginPath(); ctx.arc(b.x, Y(b.y), b.r, 0, 7); ctx.fill();
+    ctx.strokeStyle = "#c9a05e"; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(b.x, Y(b.y), b.r - 2, 0, 7); ctx.stroke();
+  }
+
+  for (const t of tanks) if (t.hp > 0) drawTank(t);
+  if (state === "aim" && tanks[turn] && !tanks[turn].cpu) drawAim(tanks[turn]);
+
+  for (const s of smoke) {
+    ctx.globalAlpha = s.life * 0.4; ctx.fillStyle = s.col || "#e8dcc6";
+    ctx.beginPath(); ctx.arc(s.x, Y(s.y), 2 + (1 - s.life) * 4, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  for (const s of shells) {
+    if (s.w.kind === "cri") {
+      ctx.strokeStyle = "#9ef2ff"; ctx.lineWidth = 3; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(s.px, Y(s.py)); ctx.lineTo(s.x, Y(s.y)); ctx.stroke();
+    }
+    ctx.fillStyle = s.w.kind === "cri" ? "#e9fbff" : "#fff3d0";
+    ctx.beginPath(); ctx.arc(s.x, Y(s.y), 3 + Math.min(4, s.w.r / 40), 0, 7); ctx.fill();
+  }
+  for (const p of puffs) {
+    const age = 1 - p.life / p.ttl;
+    ctx.globalAlpha = clamp(p.life / p.ttl, 0, 1) * p.alpha;
+    ctx.fillStyle = p.tone;
+    ctx.beginPath(); ctx.arc(p.x, Y(p.y), p.r * (0.5 + age * 1.6), 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // fireballs: an outer glow plus a hot core, held long enough to read
+  for (const b of balls) {
+    const k = 1 - b.life, rad = b.r * (0.45 + k * 1.05);
+    ctx.globalAlpha = clamp(b.life, 0, 1) * 0.45;
+    ctx.fillStyle = "#ff7a2a";
+    ctx.beginPath(); ctx.arc(b.x, Y(b.y), rad * 1.3, 0, 7); ctx.fill();
+    ctx.globalAlpha = clamp(b.life * 1.25, 0, 1);
+    ctx.fillStyle = b.life > 0.8 ? "#fffdf0" : b.life > 0.58 ? "#ffe9a6" :
+                    b.life > 0.36 ? "#ffb347" : b.life > 0.18 ? "#f26a2c" : "#c9402a";
+    ctx.beginPath(); ctx.arc(b.x, Y(b.y), rad, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  for (const s of shocks) {
+    ctx.globalAlpha = s.life * 0.75;
+    ctx.strokeStyle = s.col || "#ffd089"; ctx.lineWidth = 2 + 7 * s.life;
+    ctx.beginPath(); ctx.arc(s.x, Y(s.y), s.r * (1 - s.life) + 6, 0, 7); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  for (const p of parts) {
+    ctx.globalAlpha = clamp(p.life, 0, 1); ctx.fillStyle = p.col;
+    ctx.fillRect(p.x - p.s / 2, Y(p.y) - p.s / 2, p.s, p.s);
+  }
+  ctx.globalAlpha = 1;
+  for (const f of flashes) {
+    ctx.globalAlpha = clamp(f.life, 0, 1) * 0.9;
+    ctx.fillStyle = "#fffdf2";
+    ctx.beginPath(); ctx.arc(f.x, Y(f.y), f.r * (1.3 - f.life * 0.5), 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+function drawTank(t) {
+  ctx.save(); ctx.translate(t.x, Y(t.y));
+  const a = t.angle * Math.PI / 180;
+  ctx.strokeStyle = t.col; ctx.lineWidth = 5; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(Math.cos(a) * 24, -10 - Math.sin(a) * 24); ctx.stroke();
+  ctx.fillStyle = t.dark; ctx.fillRect(-14, -8, 28, 8);
+  ctx.fillStyle = t.col;
+  ctx.beginPath(); ctx.moveTo(-12, -8); ctx.lineTo(-8, -15); ctx.lineTo(8, -15); ctx.lineTo(12, -8);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, -14, 6, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = "#221a33";
+  for (let i = -11; i <= 11; i += 5.5) { ctx.beginPath(); ctx.arc(i, -3, 2.2, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+function drawAim(t) {
+  const m = muzzle(t), a = t.angle * Math.PI / 180, len = 18 + t.power * 0.8;
+  ctx.save(); ctx.setLineDash([7, 7]); ctx.lineWidth = 2.5;
+  ctx.strokeStyle = t.col; ctx.globalAlpha = 0.75;
+  ctx.beginPath(); ctx.moveTo(m.x, Y(m.y));
+  ctx.lineTo(m.x + Math.cos(a) * len, Y(m.y + Math.sin(a) * len));
+  ctx.stroke(); ctx.restore();
+}
+
+/* ================= sound ================= */
+let AC = null;
+function sfx(kind, size) {
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === "suspended") AC.resume();
+    const t0 = AC.currentTime, g = AC.createGain(); g.connect(AC.destination);
+    if (kind === "fire") {
+      const o = AC.createOscillator(); o.type = "square";
+      o.frequency.setValueAtTime(220, t0);
+      o.frequency.exponentialRampToValueAtTime(60, t0 + 0.18);
+      g.gain.setValueAtTime(0.12, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2);
+      o.connect(g); o.start(t0); o.stop(t0 + 0.22);
+    } else {
+      const big = clamp((size || 46) / 60, 0.6, 3.6);
+      const len = Math.floor(AC.sampleRate * 0.3 * big);
+      const buf = AC.createBuffer(1, len, AC.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+      const s = AC.createBufferSource(); s.buffer = buf;
+      const f = AC.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 900 / big;
+      g.gain.setValueAtTime(clamp(0.18 * big, 0.1, 0.42), t0);
+      s.connect(f); f.connect(g); s.start(t0);
+    }
+  } catch (e) {}
+}
+
+/* ================= hud ================= */
+function say(text, ms) {
+  const m = $("msg"); m.textContent = text; m.classList.add("on");
+  clearTimeout(say._t);
+  if (ms) say._t = setTimeout(() => m.classList.remove("on"), ms);
+}
+function buildRoster() {
+  const r = $("roster"); r.innerHTML = "";
+  for (const t of tanks) {
+    const d = document.createElement("div");
+    d.className = "chip"; d.id = "chip" + t.i; d.style.setProperty("--c", t.col);
+    d.innerHTML = '<span class="tag">' + t.short + '</span><div class="mini"><i style="width:100%"></i></div>';
+    r.appendChild(d);
+  }
+}
+function hudRoster() {
+  for (const t of tanks) {
+    const c = $("chip" + t.i); if (!c) continue;
+    c.classList.toggle("on", t.i === turn && t.hp > 0);
+    c.classList.toggle("dead", t.hp <= 0);
+    c.querySelector("i").style.width = Math.max(0, t.hp) + "%";
+  }
+}
+function hudWind() {
+  const n = Math.round(Math.abs(wind));
+  $("windnum").innerHTML = (wind < 0 ? "\u25C0 " : "") + n + (wind > 0 ? " \u25B6" : "") + " <span>wind</span>";
+  const g = $("gfill"), f = Math.abs(wind) / MAXWIND * 50;
+  g.style.width = f + "%"; g.style.left = wind >= 0 ? "50%" : (50 - f) + "%";
+}
+function hudTurn() {
+  const t = tanks[turn], mine = state === "aim" && t && !t.cpu;
+  $("who").innerHTML = t ? t.name + "<b>" + money(t.cash) + "</b>" : "&nbsp;";
+  $("who").style.color = t ? t.col : "var(--ink)";
+  $("rnd").textContent = "Round " + round + "/" + roundsTotal;
+  $("fire").disabled = !mine;
+  $("skip").disabled = !mine;
+  $("menubtn").disabled = state === "setup";
+  $("ang").disabled = $("pow").disabled = $("armbtn").disabled = !mine;
+  const w = W[t ? t.sel : "incin"], n = t ? have(t, w.id) : 0;
+  $("armbtn").innerHTML = "<span>" + w.name + "</span><i>" + (n === Infinity ? "\u221E" : n + " left") + "</i>";
+  hudRoster(); syncDials();
+}
+function syncDials() {
+  const t = tanks[turn]; if (!t) return;
+  $("ang").value = Math.round(t.angle); $("angv").textContent = Math.round(t.angle) + "\u00B0";
+  $("pow").value = Math.round(t.power); $("powv").textContent = Math.round(t.power);
+}
+
+/* ================= wind ================= */
+function newWind(announce) {
+  const old = wind;
+  do { wind = Math.round(rnd(-MAXWIND, MAXWIND)); } while (Math.abs(wind - old) < 8);
+  windTurns = Math.round(rnd(3, 6));
+  hudWind();
+  if (announce) say("Wind shifted", 1800);
+}
+function tickWind() { if (--windTurns <= 0) newWind(true); }
+
+/* ================= persistence ================= */
+function saveGame(p) {
+  if (!tanks.length) return;
+  phase = p || phase;
+  savedAt = Date.now();
+  const d = {
+    v: 2, phase, round, roundsTotal, turn, wind, windTurns, worldH,
+    cfgCount, cfgKind: cfgKind.slice(), shopQueue: shopQueue.slice(),
+    boardSub: lastBoardSub, when: savedAt,
+    T: Array.prototype.map.call(T, v => Math.round(v * 10) / 10),
+    blobs: blobs.map(b => ({ x: Math.round(b.x), y: Math.round(b.y), r: Math.round(b.r) })),
+    tanks: tanks.map(t => ({ i: t.i, kind: t.kind, name: t.name, short: t.short,
+      x: t.x, y: t.y, hp: t.hp, angle: t.angle, power: t.power, err: t.err,
+      cash: t.cash, ammo: t.ammo, sel: t.sel, wins: t.wins, kills: t.kills,
+      roundKills: t.roundKills, dead: t.dead }))
+  };
+  try { store.set(JSON.stringify(d)); } catch (e) {}
+}
+function loadGame() {
+  try {
+    const raw = store.get();
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    return (d && d.v === 2 && d.tanks && d.tanks.length) ? d : null;
+  } catch (e) { return null; }
+}
+function resumeGame(d) {
+  cfgCount = d.cfgCount; cfgKind = d.cfgKind.slice();
+  roundsTotal = d.roundsTotal; round = d.round;
+  buildTanks();
+  d.tanks.forEach((s, i) => {
+    const t = tanks[i]; if (!t) return;
+    t.name = s.name; t.short = s.short;
+    t.x = s.x; t.y = s.y; t.hp = s.hp; t.angle = s.angle; t.power = s.power; t.err = s.err;
+    t.cash = s.cash; t.ammo = s.ammo || {}; t.sel = s.sel; t.wins = s.wins;
+    t.kills = s.kills; t.roundKills = s.roundKills; t.dead = s.dead;
+  });
+  const k = worldH / (d.worldH || worldH);
+  for (let x = 0; x <= WW; x++) T[x] = clamp((d.T[x] || 0) * k, 0, worldH);
+  blobs = (d.blobs || []).map(b => ({ x: b.x, y: b.y * k, r: b.r }));
+  rebuildSurface();
+  for (const t of tanks) t.y *= k;
+  seatTanks();
+  wind = d.wind; windTurns = d.windTurns; turn = d.turn;
+  lastBoardSub = d.boardSub || "";
+  shells = []; parts = []; smoke = []; puffs = []; shocks = []; balls = []; flashes = []; pending = [];
+  shake = 0;
+  buildRoster(); hudWind(); hudTurn();
+  if (d.phase === "shop") { state = "shop"; shopQueue = (d.shopQueue || []).slice(); nextShopper(); }
+  else if (d.phase === "board") showBoard();
+  else startTurn();
+}
+function clearSave() { store.clear(); savedAt = 0; }
+
+/* ================= menu ================= */
+function openMenu() {
+  if (state === "setup") return;
+  const t = tanks[turn];
+  const canResign = (state === "aim" || state === "card") && t && t.hp > 0 && !t.cpu;
+  $("mResign").disabled = !canResign;
+  $("mResign").textContent = canResign ? "Resign (" + t.name + ")" : "Resign this round";
+  const when = savedAt ? new Date(savedAt).toLocaleTimeString() : "not yet";
+  $("saveinfo").innerHTML = (store.ok
+    ? "Progress is saved in this browser after every turn.<br>Last save: <b>" + when + "</b>."
+    : "This browser is blocking storage here, so progress only lasts while the page is open.") +
+    "<br><br>Resigning destroys your tank and forfeits the round. The rest of the match carries on.";
+  $("menu").classList.remove("hide");
+}
+function closeMenu() { $("menu").classList.add("hide"); }
+function resign() {
+  const t = tanks[turn];
+  if (!t || t.hp <= 0) return;
+  closeMenu();
+  if (cardDone) cardDone();
+  t.hp = 0; t.dead = true;
+  say(t.name + " resigns", 2200);
+  pending.push({ x: t.x, y: t.y + 8, r: 78, dmg: 60, own: t.i, wait: 0.2 });
+  turnDamage = 0; turnCash = 0;
+  hudTurn();
+  state = "settle"; settleClock = 0;
+}
+$("menubtn").onclick = openMenu;
+$("mBack").onclick = closeMenu;
+$("mResign").onclick = resign;
+$("mQuit").onclick = () => { clearSave(); location.reload(); };
+
+/* ================= full screen & install ================= */
+function lockLandscape() {
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      const p = screen.orientation.lock("landscape");
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch (e) {}
+}
+function goFullscreen() {
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+  if (req && !document.fullscreenElement && !document.webkitFullscreenElement) {
+    try {
+      const p = req.call(el);
+      if (p && p.then) p.then(lockLandscape).catch(() => {});
+      else lockLandscape();
+    } catch (e) { lockLandscape(); }
+  } else lockLandscape();
+  setTimeout(resize, 250);
+}
+function exitFullscreen() {
+  const ex = document.exitFullscreen || document.webkitExitFullscreen;
+  if (ex && (document.fullscreenElement || document.webkitFullscreenElement)) {
+    try { ex.call(document); } catch (e) {}
+  }
+  setTimeout(resize, 250);
+}
+const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+const isInstalled = () => matchMedia("(display-mode: fullscreen)").matches ||
+  matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+let installEvent = null;
+addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  installEvent = e;
+  if (!isInstalled()) $("installbtn").style.display = "";
+});
+$("installbtn").onclick = async () => {
+  if (!installEvent) return;
+  $("installbtn").style.display = "none";
+  installEvent.prompt();
+  try { await installEvent.userChoice; } catch (e) {}
+  installEvent = null;
+};
+addEventListener("appinstalled", () => { $("installbtn").style.display = "none"; installEvent = null; });
+addEventListener("fullscreenchange", () => { $("mFull").textContent = isFullscreen() ? "Leave full screen" : "Full screen"; setTimeout(resize, 120); });
+$("mFull").onclick = () => { isFullscreen() ? exitFullscreen() : goFullscreen(); closeMenu(); };
+
+/* ================= setup ================= */
+function buildSetup() {
+  const pc = $("pcount"); pc.innerHTML = "";
+  for (let n = 2; n <= 8; n++) {
+    const b = document.createElement("button");
+    b.textContent = n; b.className = n === cfgCount ? "on" : "";
+    b.onclick = () => { cfgCount = n; buildSetup(); };
+    pc.appendChild(b);
+  }
+  const rc = $("rcount"); rc.innerHTML = "";
+  for (const n of [3, 5, 9]) {
+    const b = document.createElement("button");
+    b.textContent = n; b.className = n === roundsTotal ? "on" : "";
+    b.onclick = () => { roundsTotal = n; buildSetup(); };
+    rc.appendChild(b);
+  }
+  const pl = $("plist"); pl.innerHTML = "";
+  for (let i = 0; i < cfgCount; i++) {
+    const row = document.createElement("div");
+    row.className = "prow"; row.style.setProperty("--c", COLORS[i][0]);
+    row.innerHTML = '<div class="dot"></div><div class="nm">Tank ' + (i + 1) + '</div><div class="seg"></div>';
+    const seg = row.querySelector(".seg");
+    for (const k of ["human", "easy", "medium", "hard"]) {
+      const b = document.createElement("button");
+      b.textContent = k === "human" ? "Human" : DIFF[k].label;
+      b.className = cfgKind[i] === k ? "on" : "";
+      b.onclick = () => { cfgKind[i] = k; buildSetup(); };
+      seg.appendChild(b);
+    }
+    pl.appendChild(row);
+  }
+}
+$("startbtn").onclick = () => {
+  goFullscreen();
+  clearSave();
+  buildTanks(); buildRoster();
+  round = 1;
+  $("setup").classList.add("hide");
+  newWind(false);
+  openShop();
+};
+
+/* ================= shop ================= */
+function openShop() {
+  state = "shop";
+  shopQueue = [];
+  for (const t of tanks) { if (t.cpu) cpuBuy(t); else shopQueue.push(t.i); }
+  nextShopper();
+}
+function nextShopper() {
+  if (!shopQueue.length) { $("shop").classList.add("hide"); beginRound(); return; }
+  const t = tanks[shopQueue[0]];
+  $("shop").style.setProperty("--c", t.col);
+  $("buyname").textContent = t.name;
+  $("buyersub").textContent = "Armory \u2014 round " + round + " of " + roundsTotal +
+    (shopQueue.length > 1 ? " \u2014 " + (shopQueue.length - 1) + " still to shop" : "");
+  $("shopdone").textContent = shopQueue.length > 1 ? "Done, next player" : "Start round";
+  renderShop(t);
+  $("shop").classList.remove("hide");
+  saveGame("shop");
+}
+function renderShop(t) {
+  $("shopcash").textContent = money(t.cash);
+  const list = $("shoplist"); list.innerHTML = "";
+  for (const w of WEAPONS) {
+    if (w.price === 0) continue;
+    const owned = have(t, w.id), afford = t.cash >= w.price;
+    const row = document.createElement("div");
+    row.className = "row" + (afford ? "" : " out");
+    row.innerHTML = '<div class="info"><div class="ttl">' + w.name +
+      (owned ? '<u>' + owned + ' in stock</u>' : '') + '</div><div class="sub">' + w.desc + '</div></div>' +
+      '<button class="buy' + (afford ? ' ok' : '') + '"' + (afford ? '' : ' disabled') + '>' +
+      money(w.price) + '<br>' + w.pack + ' shells</button>';
+    row.querySelector("button").onclick = ev => {
+      ev.stopPropagation();
+      if (t.cash < w.price) return;
+      t.cash -= w.price;
+      t.ammo[w.id] = (t.ammo[w.id] || 0) + w.pack;
+      renderShop(t); saveGame("shop");
+    };
+    list.appendChild(row);
+  }
+}
+$("shopdone").onclick = () => { shopQueue.shift(); nextShopper(); };
+function cpuBuy(t) {
+  const thrift = t.kind === "easy" ? 0.45 : t.kind === "medium" ? 0.7 : 1;
+  for (let i = 0; i < 6; i++) {
+    const afford = WEAPONS.filter(w => w.price > 0 && w.price <= t.cash && w.rank > 0);
+    if (!afford.length) break;
+    afford.sort((a, b) => b.price - a.price);
+    const w = afford[Math.random() < thrift ? 0 : Math.floor(Math.random() * afford.length)];
+    t.cash -= w.price;
+    t.ammo[w.id] = (t.ammo[w.id] || 0) + w.pack;
+  }
+  if (t.cash >= W.dirt.price && Math.random() < 0.4) {
+    t.cash -= W.dirt.price; t.ammo.dirt = (t.ammo.dirt || 0) + W.dirt.pack;
+  }
+}
+
+/* ================= arsenal picker ================= */
+function openPick() {
+  if (state !== "aim" || tanks[turn].cpu) return;
+  const t = tanks[turn];
+  $("pickcash").textContent = money(t.cash);
+  const list = $("picklist"); list.innerHTML = "";
+  for (const w of WEAPONS) {
+    const n = have(t, w.id);
+    if (n <= 0) continue;
+    const row = document.createElement("div");
+    row.className = "row" + (t.sel === w.id ? " sel" : "");
+    row.innerHTML = '<div class="info"><div class="ttl">' + w.name + '<u>' +
+      (n === Infinity ? "unlimited" : n + " left") + '</u></div><div class="sub">' + w.desc + '</div></div>';
+    row.onclick = () => { t.sel = w.id; $("pick").classList.add("hide"); hudTurn(); };
+    list.appendChild(row);
+  }
+  $("pick").classList.remove("hide");
+}
+$("armbtn").onclick = openPick;
+$("pickclose").onclick = () => $("pick").classList.add("hide");
+
+/* ================= turn flow ================= */
+function showCard(t, after) {
+  state = "card";
+  hudTurn();
+  $("turncard").style.setProperty("--c", t.col);
+  $("tcName").textContent = t.name;
+  $("tcSub").textContent = "Your shot";
+  $("turncard").classList.remove("hide");
+  cardDone = () => {
+    if (!cardDone) return;
+    cardDone = null;
+    clearTimeout(cardTimer);
+    $("turncard").classList.add("hide");
+    after();
+  };
+  cardTimer = setTimeout(() => cardDone && cardDone(), 3000);
+}
+function startTurn() {
+  const t = tanks[turn];
+  ensureAmmo(t);
+  saveGame("turn");
+  if (t.cpu) {                       // no card for the computer, it just shoots
+    state = "aim"; hudTurn();
+    say(t.name + " is aiming", 1600);
+    setTimeout(cpuShot, 850);
+  } else {
+    showCard(t, () => { state = "aim"; hudTurn(); });
+  }
+}
+function beginRound() {
+  makeTerrain(); placeTanks();
+  shells = []; parts = []; smoke = []; puffs = []; shocks = []; balls = []; flashes = []; pending = [];
+  shake = 0;
+  const live = alive();
+  turn = live[Math.floor(Math.random() * live.length)].i;
+  hudWind();
+  startTurn();
+}
+function fire() {
+  if (state !== "aim") return;
+  const t = tanks[turn];
+  ensureAmmo(t);
+  const w = W[t.sel];
+  turnDamage = 0; turnCash = 0;
+  if (w.price > 0) { t.ammo[w.id]--; if (t.ammo[w.id] <= 0) delete t.ammo[w.id]; }
+  const m = muzzle(t), a = t.angle * Math.PI / 180;
+  const v = t.power * SPEED * (w.kind === "cri" ? CRI_SPEED : 1);
+  shells.push({ x: m.x, y: m.y, px: m.x, py: m.y,
+    vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, w, own: turn, split: false });
+  sfx("fire");
+  for (let i = 0; i < 10; i++) parts.push({ x: m.x, y: m.y,
+    vx: Math.cos(a) * rnd(40, 140) + rnd(-30, 30), vy: Math.sin(a) * rnd(40, 140) + rnd(-30, 30),
+    life: rnd(.3, .6), s: rnd(2, 4), col: "#ffd089" });
+  smokeBurst(m.x, m.y, 14, 3, 0.35);
+  state = "fly"; flyClock = 0;
+  $("msg").classList.remove("on");
+  hudTurn();
+}
+function skipTurn() {
+  if (state !== "aim" || tanks[turn].cpu) return;
+  turnDamage = 0; turnCash = 0;
+  say(tanks[turn].name + " holds fire", 1400);
+  nextTurn();
+}
+function nextTurn() {
+  if (turnDamage >= 1) say("Dealt " + Math.round(turnDamage) + " damage, earned " + money(turnCash), 2000);
+  if (alive().length <= 1) return endRound();
+  for (let k = 1; k <= tanks.length; k++) {
+    const i = (turn + k) % tanks.length;
+    if (tanks[i].hp > 0) { turn = i; break; }
+  }
+  tickWind();
+  startTurn();
+}
+function endRound() {
+  state = "board";
+  const left = alive();
+  lastBoardSub = "Everyone is gone.";
+  if (left.length === 1) {
+    left[0].wins++;
+    const bonus = 500 * tanks.length;
+    left[0].cash += bonus;
+    lastBoardSub = left[0].name + " survives and takes " + money(bonus) + ".";
+  }
+  showBoard();
+  saveGame("board");
+}
+function showBoard() {
+  state = "board";
+  const last = round >= roundsTotal;
+  $("boardttl").textContent = last ? "Match over" : "Round " + round + " over";
+  $("boardsub2").textContent = last ? "Final standings" : lastBoardSub;
+  const rank = tanks.slice().sort((a, b) => b.wins - a.wins || b.kills - a.kills || b.cash - a.cash);
+  const list = $("boardlist"); list.innerHTML = "";
+  rank.forEach((t, i) => {
+    const d = document.createElement("div");
+    d.className = "score"; d.style.setProperty("--c", t.col);
+    d.innerHTML = '<div class="pos">' + (i + 1) + '</div><div class="nm">' + t.name + '</div>' +
+      '<div class="kv">rounds<b>' + t.wins + '</b></div>' +
+      '<div class="kv">kills<b>' + t.kills + '</b></div>' +
+      '<div class="kv">cash<b>' + money(t.cash) + '</b></div>';
+    list.appendChild(d);
+  });
+  $("boardnext").textContent = last ? "New match" : "Go to the armory";
+  $("boardnext").onclick = last ? (() => { clearSave(); location.reload(); })
+    : (() => { $("board").classList.add("hide"); round++; openShop(); });
+  $("board").classList.remove("hide");
+  hudTurn();
+}
+
+/* ================= explosions & damage ================= */
+function smokeBurst(x, y, r, n, alpha) {
+  for (let i = 0; i < n; i++) {
+    const a = rnd(0, Math.PI * 2), sp = rnd(10, r * 1.6), ttl = rnd(2.2, 4.6);
+    puffs.push({ x: x + rnd(-r * .3, r * .3), y: y + rnd(0, r * .4),
+      vx: Math.cos(a) * sp * 0.5, vy: Math.abs(Math.sin(a)) * sp * 0.5 + rnd(6, 22),
+      r: rnd(r * 0.25, r * 0.55), life: ttl, ttl, alpha: (alpha || 0.55) * rnd(0.7, 1),
+      tone: ["#5d5261", "#6e6270", "#847a86", "#4a4152"][Math.floor(rnd(0, 4))] });
+  }
+  if (puffs.length > 300) puffs.splice(0, puffs.length - 300);
+}
+function payKill(killer, victim) {
+  if (!killer || killer === victim) return;
+  killer.roundKills++; killer.kills++;
+  const bonus = KILL_BASE * killer.roundKills;
+  killer.cash += bonus; turnCash += bonus;
+  say(killer.name + " knocked out " + victim.name + " \u2014 " + money(bonus), 2200);
+}
+function killTank(t, owner, note) {
+  if (t.hp <= 0 && t.dead) return;
+  const took = t.hp;
+  t.hp = 0; t.dead = true;
+  if (t.i !== owner) {
+    const cash = took * CASH_PER_HP;
+    tanks[owner].cash += cash; turnDamage += took; turnCash += cash;
+  }
+  payKill(tanks[owner], t);
+  if (note) say(note, 1800);
+  pending.push({ x: t.x, y: t.y + 8, r: 78, dmg: 60, own: t.i, wait: 0.25 });
+  hudTurn();
+}
+function applyDamage(x, y, reach, dmg, owner) {
+  for (const t of tanks) {
+    if (t.hp <= 0) continue;
+    const d = Math.hypot(t.x - x, (t.y + 8) - y);
+    if (d >= reach) continue;
+    const hit = dmg * Math.pow(1 - d / reach, FALLOFF);   // near misses hurt badly
+    if (hit <= 0.5) continue;
+    const took = Math.min(t.hp, hit);
+    t.hp = Math.max(0, t.hp - hit);
+    if (t.i !== owner) {
+      const cash = took * CASH_PER_HP;
+      tanks[owner].cash += cash; turnDamage += took; turnCash += cash;
+    }
+    if (t.hp <= 0 && !t.dead) {
+      t.dead = true;
+      payKill(tanks[owner], t);
+      pending.push({ x: t.x, y: t.y + 8, r: 78, dmg: 60, own: t.i, wait: 0.25 });
+    }
+  }
+  hudTurn();
+}
+function boom(x, y, r, dmg, owner, opts) {
+  opts = opts || {};
+  sfx("boom", r);
+  shake = Math.min(16, shake + r / 9);
+  flashes.push({ x, y, r: r * 0.85, life: 1 });
+  balls.push({ x, y, r: r * 1.25, life: 1 });
+  shocks.push({ x, y, r: r * 2.2, life: 1, col: opts.col });
+  const debris = clamp(Math.round(r * 0.8), 16, 90);
+  for (let i = 0; i < debris; i++) {
+    const a = rnd(0, Math.PI * 2), sp = rnd(40, 160 + r * 2.2);
+    parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.abs(Math.sin(a)) * sp,
+      life: rnd(.6, 1.6), s: rnd(2, 7),
+      col: i % 4 === 0 ? "#8a6a4a" : i % 3 ? (i % 2 ? "#ffd089" : "#e8a13c") : "#fff2c9" });
+  }
+  smokeBurst(x, y, r, clamp(Math.round(r / 5), 6, 26), 0.6);
+  if (!opts.noCarve) carve(x, y, r * 0.85);
+  if (dmg > 0) applyDamage(x, y, r * 1.15, dmg, owner);
+  seatTanks();
+}
+function mushroom(x, y, r) {
+  for (let i = 0; i < 16; i++) {
+    const ttl = rnd(3.4, 5.5);
+    puffs.push({ x: x + rnd(-r * .12, r * .12), y: y + i * r * 0.09, vx: rnd(-8, 8), vy: rnd(50, 90),
+      r: rnd(r * .16, r * .3), life: ttl, ttl, alpha: 0.5, tone: i % 2 ? "#6e6270" : "#847a86" });
+  }
+  for (let i = 0; i < 22; i++) {
+    const a = rnd(0, Math.PI * 2), ttl = rnd(3.8, 6);
+    puffs.push({ x: x + Math.cos(a) * r * 0.45, y: y + r * 0.75 + rnd(-10, 10),
+      vx: Math.cos(a) * rnd(20, 60), vy: rnd(30, 70), r: rnd(r * .2, r * .38), life: ttl, ttl,
+      alpha: 0.5, tone: i % 3 ? "#7b7080" : "#96899a" });
+  }
+}
+function impact(s, x, y) {
+  const w = s.w;
+  x = clamp(x, -40, WW + 40);
+  if (w.kind === "dirt") {
+    sfx("boom", w.r);
+    dropBall(x, y, w.r);
+    shocks.push({ x, y, r: w.r * 1.4, life: 1, col: "#c9a05e" });
+    for (let i = 0; i < 26; i++) parts.push({ x, y, vx: rnd(-70, 70), vy: rnd(20, 110),
+      life: rnd(.4, 1), s: rnd(3, 6), col: "#8a6a4a" });
+    smokeBurst(x, y, w.r * 0.6, 6, 0.35);
+    seatTanks();                       // anyone under the ball ends up on top of it
+    return;
+  }
+  boom(x, y, w.r, w.dmg, s.own, { noCarve: w.id === "cri20" });
+  if (w.kind === "nuke") mushroom(x, y, w.r);
+}
+
+/* ================= computer ================= */
+function simulate(shooter, target, angle, power, fast) {
+  const a = angle * Math.PI / 180, v = power * SPEED * (fast ? CRI_SPEED : 1);
+  let x = shooter.x + Math.cos(a) * 26, y = shooter.y + 10 + Math.sin(a) * 26;
+  let vx = Math.cos(a) * v, vy = Math.sin(a) * v;
+  const dt = fast ? 1 / 400 : 1 / 90;
+  let best = 1e9;
+  for (let i = 0; i < 1200; i++) {
+    vx += wind * dt; vy -= G * dt; x += vx * dt; y += vy * dt;
+    const d = Math.hypot(x - target.x, y - (target.y + 8));
+    if (d < best) best = d;
+    if (d < 10 || x < -260 || x > WW + 260 || y < -200) break;
+    if (y <= ground(x)) break;
+  }
+  return best;
+}
+function cpuShot() {
+  if (state !== "aim" || !tanks[turn] || !tanks[turn].cpu) return;
+  const me = tanks[turn], d = me.diff;
+  const foes = alive().filter(t => t.i !== me.i);
+  if (!foes.length) return;
+  let foe;
+  if (d.smart) {
+    const list = foes.slice().sort((a, b) =>
+      (a.hp + Math.abs(a.x - me.x) * 0.1) - (b.hp + Math.abs(b.x - me.x) * 0.1));
+    foe = list[0];
+  } else foe = pick(foes);
+
+  const owned = WEAPONS.filter(w => w.rank > 0 && have(me, w.id) > 0);
+  owned.sort((a, b) => b.rank - a.rank);
+  me.sel = (me.err < d.armAt && owned.length) ? owned[0].id : "incin";
+  const fast = W[me.sel].kind === "cri";
+
+  let best = { d: 1e9, a: 45, p: 60 };
+  const step = d.smart ? 3 : 5;
+  for (let a = 10; a <= 170; a += step)
+    for (let p = 20; p <= 100; p += 4) {
+      const miss = simulate(me, foe, a, p, fast);
+      if (miss < best.d) best = { d: miss, a, p };
+    }
+  me.angle = clamp(best.a + rnd(-5, 5) * me.err, 0, 180);
+  me.power = clamp(best.p + rnd(-15, 15) * me.err, 5, 100);
+  me.err *= d.decay;
+  hudTurn();
+  fire();
+}
+
+/* ================= simulation ================= */
+function step(dt) {
+  shake *= Math.pow(0.02, dt);
+  if (shake < 0.1) shake = 0;
+
+  for (let i = pending.length - 1; i >= 0; i--) {
+    const p = pending[i];
+    p.wait -= dt;
+    if (p.wait <= 0) { pending.splice(i, 1); boom(p.x, p.y, p.r, p.dmg, p.own); }
+  }
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.vy -= G * dt * 1.4; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 0.8;
+    if (p.life <= 0 || p.y < -40) parts.splice(i, 1);
+  }
+  for (let i = puffs.length - 1; i >= 0; i--) {
+    const p = puffs[i];
+    p.life -= dt;
+    p.vx += wind * dt * 0.25; p.vx *= (1 - 0.5 * dt);
+    p.vy = p.vy * (1 - 0.6 * dt) + 9 * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    if (p.life <= 0) puffs.splice(i, 1);
+  }
+  for (let i = balls.length - 1; i >= 0; i--) { balls[i].life -= dt * 1.15; if (balls[i].life <= 0) balls.splice(i, 1); }
+  for (let i = flashes.length - 1; i >= 0; i--) { flashes[i].life -= dt * 6; if (flashes[i].life <= 0) flashes.splice(i, 1); }
+  for (let i = smoke.length - 1; i >= 0; i--) { smoke[i].life -= dt * 1.1; if (smoke[i].life <= 0) smoke.splice(i, 1); }
+  for (let i = shocks.length - 1; i >= 0; i--) { shocks[i].life -= dt * 2.0; if (shocks[i].life <= 0) shocks.splice(i, 1); }
+
+  if (state === "fly") {
+    flyClock += dt;
+    stepShells(dt);
+    if ((!shells.length && !pending.length) || flyClock > 25) {
+      shells = [];
+      state = "settle"; settleClock = 0;
+    }
+  }
+  if (state === "settle") {
+    let moving = false;
+    for (const t of tanks) {
+      if (t.hp <= 0) continue;
+      const g = ground(t.x);
+      if (t.y > g + 0.5) {
+        t.vy -= G * dt; t.y += t.vy * dt; moving = true;
+        if (t.y <= g) {
+          const drop = Math.min(30, Math.max(0, Math.round(-t.vy / 14)));
+          t.y = g; t.vy = 0;
+          if (drop > 3) {
+            t.hp = Math.max(0, t.hp - drop);
+            if (t.hp <= 0 && !t.dead) { t.dead = true; pending.push({ x: t.x, y: t.y + 8, r: 78, dmg: 60, own: t.i, wait: 0.2 }); }
+            hudTurn();
+          }
+        }
+      } else if (t.y < g) { t.y = g; t.vy = 0; }
+    }
+    settleClock += dt;
+    if (!moving && !pending.length && settleClock > 0.9) nextTurn();
+  }
+}
+function stepShells(dt) {
+  if (!shells.length) return;
+  let fastest = 0;
+  for (const s of shells) fastest = Math.max(fastest, Math.hypot(s.vx, s.vy));
+  const sub = clamp(Math.ceil(fastest * dt / 5), 6, 90);   // never skip past a tank
+  const h = dt / sub;
+  for (let k = 0; k < sub; k++) {
+    for (let i = shells.length - 1; i >= 0; i--) {
+      const s = shells[i];
+      s.px = s.x; s.py = s.y;
+      s.vx += wind * h; s.vy -= G * h;
+      s.x += s.vx * h; s.y += s.vy * h; s.t += h;
+
+      if (s.w.kind === "mirv" && !s.split && s.vy <= 0) {   // splits at the top of the arc
+        s.split = true;
+        shells.splice(i, 1);
+        for (let j = 0; j < 5; j++) shells.push({ x: s.x + (j - 2) * 10, y: s.y,
+          px: s.x, py: s.y, vx: s.vx + (j - 2) * 28, vy: s.vy + rnd(-12, 12),
+          t: 0, w: MIRVLET, own: s.own, split: true });
+        continue;
+      }
+
+      let struck = null;
+      for (const t of tanks) {
+        if (t.hp <= 0) continue;
+        if (Math.hypot(s.x - t.x, s.y - (t.y + 8)) < 14) { struck = t; break; }
+      }
+      if (struck) {
+        shells.splice(i, 1);
+        killTank(struck, s.own, "Direct hit \u2014 " + struck.name + " destroyed");
+        boom(s.x, s.y, s.w.r, s.w.dmg, s.own, { noCarve: s.w.id === "cri20" });
+        if (s.w.kind === "nuke") mushroom(s.x, s.y, s.w.r);
+        continue;
+      }
+      if (s.x > -30 && s.x < WW + 30 && s.y <= ground(s.x)) {
+        shells.splice(i, 1);
+        impact(s, s.x, Math.max(ground(s.x), 0));
+        continue;
+      }
+      if (s.x < -300 || s.x > WW + 300 || s.y < -400) {
+        shells.splice(i, 1);
+        if (!shells.length) say("Off the map", 1500);
+        continue;
+      }
+      if (s.t > 0.02 && k % Math.ceil(sub / 6) === 0) {
+        smoke.push({ x: s.x, y: s.y, life: 1, col: s.w.kind === "cri" ? "#9ef2ff" : null });
+        if (smoke.length > 240) smoke.shift();
+      }
+    }
+  }
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  step(dt); paint();
+  requestAnimationFrame(frame);
+}
+
+/* ================= input ================= */
+$("ang").addEventListener("input", e => {
+  if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
+  tanks[turn].angle = +e.target.value;
+  $("angv").textContent = e.target.value + "\u00B0";
+});
+$("pow").addEventListener("input", e => {
+  if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
+  tanks[turn].power = +e.target.value;
+  $("powv").textContent = e.target.value;
+});
+$("fire").addEventListener("click", fire);
+$("skip").addEventListener("click", skipTurn);
+$("turncard").onclick = () => cardDone && cardDone();
+
+let dragging = false;
+function aimFrom(ev) {
+  const r = cvs.getBoundingClientRect();
+  const wx = (ev.clientX - r.left) / scale, wy = worldH - (ev.clientY - r.top) / scale;
+  const t = tanks[turn];
+  const dx = wx - t.x, dy = wy - (t.y + 10);
+  t.angle = clamp(Math.atan2(Math.max(dy, 0), dx) * 180 / Math.PI, 0, 180);
+  t.power = clamp(Math.hypot(dx, dy) / 3.4, 5, 100);
+  syncDials();
+}
+cvs.addEventListener("pointerdown", e => {
+  if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
+  dragging = true;
+  try { cvs.setPointerCapture(e.pointerId); } catch (err) {}
+  aimFrom(e); e.preventDefault();
+}, { passive: false });
+cvs.addEventListener("pointermove", e => { if (dragging) { aimFrom(e); e.preventDefault(); } }, { passive: false });
+addEventListener("pointerup", () => { dragging = false; });
+addEventListener("pointercancel", () => { dragging = false; });
+
+addEventListener("keydown", e => {
+  if (state === "card" && (e.key === " " || e.key === "Enter")) { cardDone && cardDone(); e.preventDefault(); return; }
+  if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
+  const t = tanks[turn];
+  if (e.key === "ArrowLeft") t.angle = clamp(t.angle + 1, 0, 180);
+  else if (e.key === "ArrowRight") t.angle = clamp(t.angle - 1, 0, 180);
+  else if (e.key === "ArrowUp") t.power = clamp(t.power + 1, 5, 100);
+  else if (e.key === "ArrowDown") t.power = clamp(t.power - 1, 5, 100);
+  else if (e.key === " " || e.key === "Enter") { fire(); e.preventDefault(); return; }
+  else if (e.key.toLowerCase() === "w") { openPick(); e.preventDefault(); return; }
+  else if (e.key.toLowerCase() === "s") { skipTurn(); e.preventDefault(); return; }
+  else return;
+  syncDials(); e.preventDefault();
+});
+
+addEventListener("resize", resize);
+addEventListener("orientationchange", () => setTimeout(resize, 200));
+
+/* ================= boot ================= */
+resize(); makeTerrain(); buildSetup(); hudWind();
+const saved = loadGame();
+$("storenote").innerHTML = (store.ok
+  ? "Your match is saved in this browser between sessions."
+  : "This browser blocks storage here, so progress lasts only while the page is open.") +
+  (isInstalled() ? "" : "<br>On iPhone or iPad, install with Share \u2192 Add to Home Screen.");
+if (saved) {
+  savedAt = saved.when || 0;
+  $("resumebtn").style.display = "";
+  $("resumebtn").innerHTML = "Resume \u2014 round " + saved.round + " of " + saved.roundsTotal;
+  $("resumebtn").onclick = () => { goFullscreen(); $("setup").classList.add("hide"); resumeGame(saved); };
+}
+if (isInstalled()) { lockLandscape(); $("installbtn").style.display = "none"; }
+if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+  addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
+addEventListener("visibilitychange", () => { if (document.hidden && tanks.length) saveGame(); });
+addEventListener("pagehide", () => { if (tanks.length) saveGame(); });
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
