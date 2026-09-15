@@ -121,6 +121,11 @@
   .prow{display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid #1f1940}
   .prow .dot{flex:0 0 10px;height:10px;border-radius:3px;background:var(--c)}
   .prow .nm{flex:0 0 52px;font-size:13px;font-weight:600;color:var(--c)}
+  .prow .pname{flex:0 0 96px;min-width:0;background:#1d1640;border:1px solid var(--edge);
+    border-radius:8px;color:var(--c);font-family:inherit;font-size:13px;font-weight:600;
+    padding:6px 8px;user-select:text;-webkit-user-select:text}
+  .prow .pname::placeholder{color:#6f659a;font-weight:500}
+  .prow .pname:focus{outline:2px solid var(--c);outline-offset:1px}
   .prow .seg button{font-size:12px;padding:6px 1px}
   .prow .seg button.on{background:var(--c);color:#14102a}
   .btn{border:1px solid var(--edge);background:#1d1640;color:var(--ink);font-family:inherit;
@@ -278,7 +283,7 @@
 const WW = 1000;
 let worldH = 600, scale = 1, dpr = 1;
 const G = 160, MAXWIND = 32, SPEED = 4.6, CRI_SPEED = 5;   // CRI rounds fly far faster
-const START_CASH = 1000, CASH_PER_HP = 8, KILL_BASE = 1000;
+const START_CASH = 1000, CASH_PER_HP = 11, KILL_BASE = 1000;
 const FALLOFF = 0.5;              // <1 keeps near misses punishing
 
 const cvs = document.getElementById("game");
@@ -315,21 +320,21 @@ const WEAPONS = [
     desc:"Free and unlimited. Your ranging shot." },
   { id:"dirt",   name:"Ball o' Dirt",        price:200,  pack:5, kind:"dirt",  r:44,  dmg:0,   rank:0,
     desc:"Drops a ball of earth. A tank caught under it is lifted onto the top." },
-  { id:"incin2", name:"Mark II Incinerator", price:300,  pack:5, kind:"blast", r:60,  dmg:75,  rank:2,
-    desc:"The same shell with a much heavier charge." },
   { id:"dirt2",  name:"Mark II Dirt",        price:600,  pack:3, kind:"dirt",  r:82,  dmg:0,   rank:0,
     desc:"A boulder of earth. Good cover until somebody blows it apart." },
-  { id:"cri4",   name:"CRI 4/D",             price:700,  pack:4, kind:"cri",   r:62,  dmg:80,  rank:3,
+  { id:"incin2", name:"Mark II Incinerator", price:900,  pack:5, kind:"blast", r:60,  dmg:75,  rank:2,
+    desc:"The same shell with a much heavier charge." },
+  { id:"cri4",   name:"CRI 4/D",             price:1800, pack:4, kind:"cri",   r:62,  dmg:80,  rank:3,
     desc:"Fast round on a flat trajectory. Digs its own crater." },
-  { id:"kilo20", name:"20 Kilo Nuke",        price:1000, pack:2, kind:"nuke",  r:100, dmg:120, rank:4,
+  { id:"kilo20", name:"20 Kilo Nuke",        price:5000, pack:2, kind:"nuke",  r:100, dmg:120, rank:4,
     desc:"A small warhead with a very generous blast radius." },
-  { id:"cri8",   name:"CRI 8/D",             price:1400, pack:3, kind:"cri",   r:98,  dmg:130, rank:5,
+  { id:"cri8",   name:"CRI 8/D",             price:6000, pack:3, kind:"cri",   r:98,  dmg:130, rank:5,
     desc:"Heavier CRI. Still arrives before the wind can do much to it." },
-  { id:"mirv",   name:"MIRV",                price:1800, pack:2, kind:"mirv",  r:54,  dmg:70,  rank:5,
+  { id:"mirv",   name:"MIRV",                price:7000, pack:2, kind:"mirv",  r:54,  dmg:70,  rank:5,
     desc:"Splits into five warheads at the top of its arc." },
-  { id:"cri20",  name:"CRI 20/ND",           price:2500, pack:2, kind:"cri",   r:150, dmg:175, rank:6,
+  { id:"cri20",  name:"CRI 20/ND",           price:10000, pack:2, kind:"cri",  r:150, dmg:175, rank:6,
     desc:"The big CRI, non-destructive. Wrecks tanks and leaves the ground intact." },
-  { id:"meg5",   name:"5 Meg Nuke",          price:4000, pack:1, kind:"nuke",  r:190, dmg:200, rank:7,
+  { id:"meg5",   name:"5 Meg Nuke",          price:14000, pack:1, kind:"nuke", r:190, dmg:200, rank:7,
     desc:"Clears a quarter of the map. Make sure you are not standing in it." }
 ];
 const W = {};
@@ -361,6 +366,7 @@ let settleClock = 0, flyClock = 0, sky = null, shake = 0;
 let turnDamage = 0, turnCash = 0, shopQueue = [], cardTimer = null, cardDone = null;
 let lastBoardSub = "", phase = "turn", savedAt = 0;
 let cfgCount = 2, cfgKind = ["human","medium","medium","medium","medium","medium","medium","medium"];
+let cfgName = ["","","","","","","",""];
 
 /* ================= canvas ================= */
 function resize() {
@@ -379,22 +385,20 @@ function resize() {
 
 /* ================= terrain ================= */
 function makeTerrain() {
-  const n = 512, h = new Float32Array(n + 1), mid = worldH * 0.32;
-  h[0] = mid * rnd(0.6, 1.2); h[n] = mid * rnd(0.6, 1.2);
-  let step = n, rough = worldH * 0.38;
+  const n = 512, h = new Float32Array(n + 1), mid = worldH * 0.34;
+  h[0] = mid * rnd(0.45, 1.5); h[n] = mid * rnd(0.45, 1.5);
+  let step = n, rough = worldH * 0.62;        // taller starting displacement
   while (step > 1) {
     const half = step >> 1;
     for (let i = half; i < n; i += step) h[i] = (h[i - half] + h[i + half]) / 2 + rnd(-rough, rough);
-    rough *= 0.54; step = half;
+    rough *= 0.62; step = half;                // slower decay keeps the small ridges
   }
   for (let x = 0; x <= WW; x++) {
     const t = x / WW * n, i = Math.floor(t), f = t - i;
-    T[x] = clamp(h[i] + (h[Math.min(n, i + 1)] - h[i]) * f, worldH * 0.07, worldH * 0.66);
+    T[x] = clamp(h[i] + (h[Math.min(n, i + 1)] - h[i]) * f, worldH * 0.05, worldH * 0.78);
   }
-  for (let k = 0; k < 2; k++) {
-    const c = T.slice();
-    for (let x = 1; x < WW; x++) T[x] = (c[x - 1] + 2 * c[x] + c[x + 1]) / 4;
-  }
+  const c = T.slice();                         // one light pass only, so peaks survive
+  for (let x = 1; x < WW; x++) T[x] = (c[x - 1] + 2 * c[x] + c[x + 1]) / 4;
   blobs = [];
   rebuildSurface();
 }
@@ -461,7 +465,11 @@ function buildTanks() {
     const [col, dark] = COLORS[i];
     const kind = cfgKind[i];
     let name, short, diff = null;
-    if (kind === "human") { name = "Player " + (i + 1); short = "P" + (i + 1); }
+    if (kind === "human") {
+      const typed = (cfgName[i] || "").trim();
+      name = typed || "Player " + (i + 1);
+      short = typed ? (typed.length > 9 ? typed.slice(0, 8) + "\u2026" : typed) : "P" + (i + 1);
+    }
     else {
       diff = DIFF[kind];
       const pool = diff.names.filter(n => used[kind].indexOf(n) < 0);
@@ -475,17 +483,23 @@ function buildTanks() {
   }
 }
 function placeTanks() {
-  const n = tanks.length, slot = (WW - 120) / n;
-  const order = tanks.map((t, i) => i).sort(() => Math.random() - 0.5);
-  for (let k = 0; k < n; k++) {
-    const t = tanks[order[k]];
-    t.x = Math.round(60 + slot * k + slot * 0.5 + rnd(-slot * 0.28, slot * 0.28));
-    flatten(t.x);
+  const n = tanks.length;
+  const gap = Math.min(150, (WW - 120) / n * 0.7);   // just enough room to not overlap
+  const xs = [];
+  for (const t of tanks) {
+    let x = 0;
+    for (let tries = 0; tries < 400; tries++) {
+      x = Math.round(rnd(55, WW - 55));
+      if (xs.every(o => Math.abs(o - x) >= gap)) break;
+    }
+    xs.push(x);
+    t.x = x;
+    flatten(x);
   }
   rebuildSurface();
   for (const t of tanks) {
     t.y = ground(t.x); t.vy = 0; t.hp = 100; t.dead = false; t.roundKills = 0;
-    t.angle = t.x < WW / 2 ? 45 : 135; t.power = 65;
+    t.angle = t.x < WW / 2 ? rnd(35, 60) : rnd(120, 145); t.power = 65;
     t.err = t.diff ? t.diff.err : 1;
   }
 }
@@ -707,7 +721,7 @@ function saveGame(p) {
   savedAt = Date.now();
   const d = {
     v: 2, phase, round, roundsTotal, turn, wind, windTurns, worldH,
-    cfgCount, cfgKind: cfgKind.slice(), shopQueue: shopQueue.slice(),
+    cfgCount, cfgKind: cfgKind.slice(), cfgName: cfgName.slice(), shopQueue: shopQueue.slice(),
     boardSub: lastBoardSub, when: savedAt,
     T: Array.prototype.map.call(T, v => Math.round(v * 10) / 10),
     blobs: blobs.map(b => ({ x: Math.round(b.x), y: Math.round(b.y), r: Math.round(b.r) })),
@@ -728,6 +742,7 @@ function loadGame() {
 }
 function resumeGame(d) {
   cfgCount = d.cfgCount; cfgKind = d.cfgKind.slice();
+  cfgName = (d.cfgName || cfgName).slice();
   roundsTotal = d.roundsTotal; round = d.round;
   buildTanks();
   d.tanks.forEach((s, i) => {
@@ -765,6 +780,7 @@ function openMenu() {
   $("saveinfo").innerHTML = (store.ok
     ? "Progress is saved in this browser after every turn.<br>Last save: <b>" + when + "</b>."
     : "This browser is blocking storage here, so progress only lasts while the page is open.") +
+    "<br>Screen sleep: <b>" + (wakeLock ? "held off" : awakeSupported() ? "not held" : "not supported here") + "</b>." +
     "<br><br>Resigning destroys your tank and forfeits the round. The rest of the match carries on.";
   $("menu").classList.remove("hide");
 }
@@ -786,7 +802,20 @@ $("mBack").onclick = closeMenu;
 $("mResign").onclick = resign;
 $("mQuit").onclick = () => { clearSave(); location.reload(); };
 
-/* ================= full screen & install ================= */
+/* ================= full screen, wake lock & install ================= */
+let wakeLock = null;
+async function keepAwake() {
+  try {
+    if (!("wakeLock" in navigator) || wakeLock) return;
+    wakeLock = await navigator.wakeLock.request("screen");
+    wakeLock.addEventListener("release", () => { wakeLock = null; });
+  } catch (e) { wakeLock = null; }
+}
+async function letSleep() {
+  try { if (wakeLock) await wakeLock.release(); } catch (e) {}
+  wakeLock = null;
+}
+const awakeSupported = () => "wakeLock" in navigator;
 function lockLandscape() {
   try {
     if (screen.orientation && screen.orientation.lock) {
@@ -855,7 +884,18 @@ function buildSetup() {
   for (let i = 0; i < cfgCount; i++) {
     const row = document.createElement("div");
     row.className = "prow"; row.style.setProperty("--c", COLORS[i][0]);
-    row.innerHTML = '<div class="dot"></div><div class="nm">Tank ' + (i + 1) + '</div><div class="seg"></div>';
+    const human = cfgKind[i] === "human";
+    row.innerHTML = '<div class="dot"></div>' +
+      (human
+        ? '<input class="pname" type="text" maxlength="14" spellcheck="false" placeholder="Player ' + (i + 1) + '">'
+        : '<div class="nm">Tank ' + (i + 1) + '</div>') +
+      '<div class="seg"></div>';
+    if (human) {
+      const inp = row.querySelector(".pname");
+      inp.value = cfgName[i] || "";
+      inp.oninput = () => { cfgName[i] = inp.value; };      // no rebuild, so focus is kept
+      inp.onkeydown = e => { if (e.key === "Enter") inp.blur(); e.stopPropagation(); };
+    }
     const seg = row.querySelector(".seg");
     for (const k of ["human", "easy", "medium", "hard"]) {
       const b = document.createElement("button");
@@ -869,6 +909,7 @@ function buildSetup() {
 }
 $("startbtn").onclick = () => {
   goFullscreen();
+  keepAwake();
   clearSave();
   buildTanks(); buildRoster();
   round = 1;
@@ -1395,13 +1436,17 @@ if (saved) {
   savedAt = saved.when || 0;
   $("resumebtn").style.display = "";
   $("resumebtn").innerHTML = "Resume \u2014 round " + saved.round + " of " + saved.roundsTotal;
-  $("resumebtn").onclick = () => { goFullscreen(); $("setup").classList.add("hide"); resumeGame(saved); };
+  $("resumebtn").onclick = () => { goFullscreen(); keepAwake(); $("setup").classList.add("hide"); resumeGame(saved); };
 }
 if (isInstalled()) { lockLandscape(); $("installbtn").style.display = "none"; }
 if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
   addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
 }
-addEventListener("visibilitychange", () => { if (document.hidden && tanks.length) saveGame(); });
+// the lock is dropped whenever the page is hidden, so take it again on return
+addEventListener("visibilitychange", () => {
+  if (document.hidden) { if (tanks.length) saveGame(); letSleep(); }
+  else if (state !== "setup") keepAwake();
+});
 addEventListener("pagehide", () => { if (tanks.length) saveGame(); });
 requestAnimationFrame(frame);
 })();
