@@ -1,5 +1,5 @@
 /* Tank Wars service worker: precache the whole game, then serve it offline. */
-const VERSION = "tankwars-v1";
+const VERSION = "tankwars-v4";
 const SHELL = [
   "./",
   "./index.html",

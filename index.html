@@ -167,12 +167,6 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .score .kv{flex:0 0 auto;font-size:13px;color:var(--dim)}
   .score .kv b{color:var(--ink);font-weight:700;margin-left:4px}
-
-  #turncard{align-items:center;justify-content:center;text-align:center;background:rgba(12,8,28,.9);cursor:pointer}
-  #turncard .kicker{font-size:14px;color:var(--dim);letter-spacing:.04em}
-  #turncard .big{font-size:clamp(28px,7vw,52px);font-weight:700;line-height:1;color:var(--c);margin:5px 0}
-  #turncard .sub{font-size:15px;color:var(--dim)}
-  #turncard .tap{margin-top:14px;font-size:12px;color:#6f659a}
 </style>
 </head>
 <body>
@@ -253,13 +247,6 @@
         <button class="btn" id="mQuit">Abandon match</button>
       </div>
     </div>
-
-    <div class="sheet hide" id="turncard">
-      <div class="kicker">Up next</div>
-      <div class="big" id="tcName">Player 1</div>
-      <div class="sub" id="tcSub"></div>
-      <div class="tap">tap to continue</div>
-    </div>
   </div>
 
   <div id="ctrl">
@@ -282,7 +269,7 @@
 /* ================= constants ================= */
 const WW = 1000;
 let worldH = 600, scale = 1, dpr = 1;
-const G = 160, MAXWIND = 32, SPEED = 4.6, CRI_SPEED = 5;   // CRI rounds fly far faster
+const G = 160, MAXWIND = 64, SPEED = 4.6, CRI_SPEED = 5;   // CRI rounds fly far faster
 const START_CASH = 1000, CASH_PER_HP = 11, KILL_BASE = 1000;
 const FALLOFF = 0.5;              // <1 keeps near misses punishing
 
@@ -316,8 +303,8 @@ const store = (() => {
    D rounds dig craters, ND rounds leave the landscape alone.
    CRI shells travel several times faster than a normal shell. */
 const WEAPONS = [
-  { id:"incin",  name:"Incinerator",         price:0,    pack:0, kind:"blast", r:38,  dmg:45,  rank:1,
-    desc:"Free and unlimited. Your ranging shot." },
+  { id:"incin",  name:"Incinerator",         price:0,    pack:0, kind:"blast", r:24,  dmg:34,  rank:1,
+    desc:"Free and unlimited. Small charge, so you have to be accurate." },
   { id:"dirt",   name:"Ball o' Dirt",        price:200,  pack:5, kind:"dirt",  r:44,  dmg:0,   rank:0,
     desc:"Drops a ball of earth. A tank caught under it is lifted onto the top." },
   { id:"dirt2",  name:"Mark II Dirt",        price:600,  pack:3, kind:"dirt",  r:82,  dmg:0,   rank:0,
@@ -350,7 +337,7 @@ const DIFF = {
             names:["Rusty","Clanker","Wobbly Pete","Tin Can","Scrapheap","Dented Dan","Old Sputter","Cross-Eyed Cliff"] },
   medium: { label:"Medium", err:1.0, decay:0.62, armAt:0.55, smart:false,
             names:["Sergeant Steel","Ironside","Gunner Greta","Steady Hand","Bravo Unit","Corporal Cinder","Flint","Ranger"] },
-  hard:   { label:"Hard",   err:0.45, decay:0.32, armAt:1.2, smart:true,
+  hard:   { label:"Hard",   err:0.22, decay:0.18, armAt:1.2, smart:true,
             names:["Widowmaker","Overkill","Iron Reaper","Deathwatch","Annihilator","Havoc","Judgement","Grave Digger"] }
 };
 
@@ -363,7 +350,7 @@ let round = 1, roundsTotal = 5;
 let state = "setup";
 let shells = [], parts = [], smoke = [], puffs = [], shocks = [], balls = [], flashes = [], pending = [];
 let settleClock = 0, flyClock = 0, sky = null, shake = 0;
-let turnDamage = 0, turnCash = 0, shopQueue = [], cardTimer = null, cardDone = null;
+let turnDamage = 0, turnCash = 0, shopQueue = [], arrowT = 0;
 let lastBoardSub = "", phase = "turn", savedAt = 0;
 let cfgCount = 2, cfgKind = ["human","medium","medium","medium","medium","medium","medium","medium"];
 let cfgName = ["","","","","","","",""];
@@ -553,6 +540,7 @@ function paint() {
   }
 
   for (const t of tanks) if (t.hp > 0) drawTank(t);
+  if (arrowT > 0 && tanks[turn] && tanks[turn].hp > 0) drawArrow(tanks[turn]);
   if (state === "aim" && tanks[turn] && !tanks[turn].cpu) drawAim(tanks[turn]);
 
   for (const s of smoke) {
@@ -619,6 +607,20 @@ function drawTank(t) {
   ctx.beginPath(); ctx.arc(0, -14, 6, Math.PI, 0); ctx.fill();
   ctx.fillStyle = "#221a33";
   for (let i = -11; i <= 11; i += 5.5) { ctx.beginPath(); ctx.arc(i, -3, 2.2, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+function drawArrow(t) {
+  const bob = Math.sin(performance.now() / 230) * 5;
+  const tip = t.y + 34 + bob, w = 11, h = 17;
+  ctx.save();
+  ctx.globalAlpha = clamp(arrowT, 0, 1);
+  ctx.fillStyle = t.col;
+  ctx.beginPath();
+  ctx.moveTo(t.x, Y(tip));
+  ctx.lineTo(t.x - w, Y(tip + h));
+  ctx.lineTo(t.x + w, Y(tip + h));
+  ctx.closePath(); ctx.fill();
+  ctx.fillRect(t.x - 4, Y(tip + h + 13), 8, 13);
   ctx.restore();
 }
 function drawAim(t) {
@@ -773,7 +775,7 @@ function clearSave() { store.clear(); savedAt = 0; }
 function openMenu() {
   if (state === "setup") return;
   const t = tanks[turn];
-  const canResign = (state === "aim" || state === "card") && t && t.hp > 0 && !t.cpu;
+  const canResign = state === "aim" && t && t.hp > 0 && !t.cpu;
   $("mResign").disabled = !canResign;
   $("mResign").textContent = canResign ? "Resign (" + t.name + ")" : "Resign this round";
   const when = savedAt ? new Date(savedAt).toLocaleTimeString() : "not yet";
@@ -789,7 +791,6 @@ function resign() {
   const t = tanks[turn];
   if (!t || t.hp <= 0) return;
   closeMenu();
-  if (cardDone) cardDone();
   t.hp = 0; t.dead = true;
   say(t.name + " resigns", 2200);
   pending.push({ x: t.x, y: t.y + 8, r: 78, dmg: 60, own: t.i, wait: 0.2 });
@@ -997,33 +998,17 @@ $("armbtn").onclick = openPick;
 $("pickclose").onclick = () => $("pick").classList.add("hide");
 
 /* ================= turn flow ================= */
-function showCard(t, after) {
-  state = "card";
-  hudTurn();
-  $("turncard").style.setProperty("--c", t.col);
-  $("tcName").textContent = t.name;
-  $("tcSub").textContent = "Your shot";
-  $("turncard").classList.remove("hide");
-  cardDone = () => {
-    if (!cardDone) return;
-    cardDone = null;
-    clearTimeout(cardTimer);
-    $("turncard").classList.add("hide");
-    after();
-  };
-  cardTimer = setTimeout(() => cardDone && cardDone(), 3000);
-}
 function startTurn() {
   const t = tanks[turn];
   ensureAmmo(t);
   saveGame("turn");
-  if (t.cpu) {                       // no card for the computer, it just shoots
-    state = "aim"; hudTurn();
+  state = "aim";
+  arrowT = 3;                       // marker above the active tank, three seconds
+  hudTurn();
+  if (t.cpu) {
     say(t.name + " is aiming", 1600);
     setTimeout(cpuShot, 850);
-  } else {
-    showCard(t, () => { state = "aim"; hudTurn(); });
-  }
+  } else say(t.name + " to shoot", 1600);
 }
 function beginRound() {
   makeTerrain(); placeTanks();
@@ -1223,30 +1208,60 @@ function simulate(shooter, target, angle, power, fast) {
   }
   return best;
 }
+/* coarse sweep, then a local refinement around the best answer */
+function solve(me, foe, fast, coarseA, coarseP, refine) {
+  let best = { d: 1e9, a: 45, p: 60 };
+  for (let a = 8; a <= 172; a += coarseA)
+    for (let p = 18; p <= 100; p += coarseP) {
+      const miss = simulate(me, foe, a, p, fast);
+      if (miss < best.d) best = { d: miss, a, p };
+    }
+  if (!refine) return best;
+  for (const [da, dp, steps] of [[coarseA, coarseP, 5], [coarseA / 3, coarseP / 3, 5]]) {
+    const a0 = best.a, p0 = best.p;
+    for (let i = -steps; i <= steps; i++)
+      for (let j = -steps; j <= steps; j++) {
+        const a = clamp(a0 + i * da / steps, 2, 178), p = clamp(p0 + j * dp / steps, 8, 100);
+        const miss = simulate(me, foe, a, p, fast);
+        if (miss < best.d) best = { d: miss, a, p };
+      }
+  }
+  return best;
+}
 function cpuShot() {
   if (state !== "aim" || !tanks[turn] || !tanks[turn].cpu) return;
   const me = tanks[turn], d = me.diff;
   const foes = alive().filter(t => t.i !== me.i);
   if (!foes.length) return;
-  let foe;
-  if (d.smart) {
-    const list = foes.slice().sort((a, b) =>
-      (a.hp + Math.abs(a.x - me.x) * 0.1) - (b.hp + Math.abs(b.x - me.x) * 0.1));
-    foe = list[0];
-  } else foe = pick(foes);
 
   const owned = WEAPONS.filter(w => w.rank > 0 && have(me, w.id) > 0);
   owned.sort((a, b) => b.rank - a.rank);
   me.sel = (me.err < d.armAt && owned.length) ? owned[0].id : "incin";
-  const fast = W[me.sel].kind === "cri";
+  let fast = W[me.sel].kind === "cri";
 
-  let best = { d: 1e9, a: 45, p: 60 };
-  const step = d.smart ? 3 : 5;
-  for (let a = 10; a <= 170; a += step)
-    for (let p = 20; p <= 100; p += 4) {
-      const miss = simulate(me, foe, a, p, fast);
-      if (miss < best.d) best = { d: miss, a, p };
+  let best, foe;
+  if (d.smart) {
+    // work out the best available shot on every opponent, then weigh how
+    // worthwhile that target is against how cleanly it can be reached
+    let pickScore = 1e9;
+    for (const f of foes) {
+      const s = solve(me, f, fast, 6, 6, false);
+      const reachable = s.d < 30 ? 0 : s.d;                 // a hill in the way is a real cost
+      const finishable = f.hp <= W[me.sel].dmg ? -40 : 0;   // prefer a tank it can actually kill
+      const score = reachable * 1.6 + f.hp * 0.45 + finishable + Math.abs(f.x - me.x) * 0.04;
+      if (score < pickScore) { pickScore = score; foe = f; best = s; }
     }
+    // if the chosen weapon cannot get there, fall back to the free shell
+    if (best.d > 90 && me.sel !== "incin") {
+      me.sel = "incin"; fast = false;
+      best = solve(me, foe, false, 6, 6, false);
+    }
+    best = solve(me, foe, fast, 4, 4, true);
+  } else {
+    foe = pick(foes);
+    best = solve(me, foe, fast, 5, 4, false);
+  }
+
   me.angle = clamp(best.a + rnd(-5, 5) * me.err, 0, 180);
   me.power = clamp(best.p + rnd(-15, 15) * me.err, 5, 100);
   me.err *= d.decay;
@@ -1256,6 +1271,7 @@ function cpuShot() {
 
 /* ================= simulation ================= */
 function step(dt) {
+  if (arrowT > 0) arrowT -= dt;
   shake *= Math.pow(0.02, dt);
   if (shake < 0.1) shake = 0;
 
@@ -1375,17 +1391,18 @@ function frame(now) {
 /* ================= input ================= */
 $("ang").addEventListener("input", e => {
   if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
+  arrowT = 0;
   tanks[turn].angle = +e.target.value;
   $("angv").textContent = e.target.value + "\u00B0";
 });
 $("pow").addEventListener("input", e => {
   if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
+  arrowT = 0;
   tanks[turn].power = +e.target.value;
   $("powv").textContent = e.target.value;
 });
-$("fire").addEventListener("click", fire);
-$("skip").addEventListener("click", skipTurn);
-$("turncard").onclick = () => cardDone && cardDone();
+$("fire").addEventListener("click", () => { arrowT = 0; fire(); });
+$("skip").addEventListener("click", () => { arrowT = 0; skipTurn(); });
 
 let dragging = false;
 function aimFrom(ev) {
@@ -1399,6 +1416,7 @@ function aimFrom(ev) {
 }
 cvs.addEventListener("pointerdown", e => {
   if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
+  arrowT = 0;
   dragging = true;
   try { cvs.setPointerCapture(e.pointerId); } catch (err) {}
   aimFrom(e); e.preventDefault();
@@ -1408,9 +1426,9 @@ addEventListener("pointerup", () => { dragging = false; });
 addEventListener("pointercancel", () => { dragging = false; });
 
 addEventListener("keydown", e => {
-  if (state === "card" && (e.key === " " || e.key === "Enter")) { cardDone && cardDone(); e.preventDefault(); return; }
   if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
   const t = tanks[turn];
+  arrowT = 0;
   if (e.key === "ArrowLeft") t.angle = clamp(t.angle + 1, 0, 180);
   else if (e.key === "ArrowRight") t.angle = clamp(t.angle - 1, 0, 180);
   else if (e.key === "ArrowUp") t.power = clamp(t.power + 1, 5, 100);
