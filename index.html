@@ -102,7 +102,7 @@
   input[type=range]:disabled{opacity:.45}
   input[type=range]:focus-visible{outline:2px solid var(--hot);outline-offset:3px;border-radius:6px}
   #fire{flex:1 1 auto;min-height:56px;border:0;border-radius:12px;cursor:pointer;background:var(--hot);
-    color:#2a1605;font-family:inherit;font-size:19px;font-weight:700}
+    color:#14102a;font-family:inherit;font-size:19px;font-weight:700}
   #fire:active{transform:translateY(1px)}
   #fire:disabled{opacity:.35}
   #skip{flex:0 0 30px;background:#1d1640;border:1px solid var(--edge);border-radius:9px;color:var(--dim);
@@ -180,6 +180,8 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .score .kv{flex:0 0 auto;font-size:13px;color:var(--dim)}
   .score .kv b{color:var(--ink);font-weight:700;margin-left:4px}
+  .score .kv.big{font-size:14px;min-width:82px;text-align:right}
+  .score .kv.big b{font-size:28px;line-height:1;margin-left:7px;color:var(--c)}
 </style>
 </head>
 <body>
@@ -241,7 +243,7 @@
     <div class="sheet hide" id="pick">
       <div class="shead"><h2>Arsenal</h2><span class="money" id="pickcash">$0</span></div>
       <div class="list" id="picklist"></div>
-      <div class="foot"><button class="btn" id="pickclose">Close</button></div>
+      <div class="foot"><button class="btn" id="pickclose">&#8249;&nbsp; Back</button></div>
     </div>
 
     <div class="sheet hide" id="board">
@@ -295,7 +297,7 @@
 const WW = 1000;
 let worldH = 600, scale = 1, dpr = 1;
 const G = 160, MAXWIND = 64, SPEED = 4.6, CRI_SPEED = 5;   // CRI rounds fly far faster
-const START_CASH = 1000, CASH_PER_HP = 11, KILL_BASE = 1000;
+const START_CASH = 1000, KILL_BOUNTY = 2000, WIN_BONUS = 4000;
 const FALLOFF = 0.5;              // <1 keeps near misses punishing
 
 const cvs = document.getElementById("game");
@@ -338,7 +340,7 @@ const WEAPONS = [
     desc:"The same shell with a much heavier charge." },
   { id:"cri4",   name:"CRI 4/D",             price:1800, pack:4, kind:"cri",   r:62,  dmg:80,  rank:3,
     desc:"Fast round on a flat trajectory. Digs its own crater." },
-  { id:"shield", name:"Deflector Shield",    price:1500, pack:1, kind:"shield",r:0,   dmg:0,   rank:0, auto:true,
+  { id:"shield", name:"Deflector Shield",    price:3000, pack:1, kind:"shield",r:0,   dmg:0,   rank:0, auto:true,
     desc:"One use. Turns away a direct hit and soaks the blast that comes with it." },
   { id:"ricochet",name:"Ricochet",           price:2400, pack:3, kind:"ricochet", r:70, dmg:85, rank:4,
     desc:"Bounces off the walls and the ceiling instead of leaving the map." },
@@ -348,9 +350,9 @@ const WEAPONS = [
     desc:"Heavier CRI. Still arrives before the wind can do much to it." },
   { id:"mirv",   name:"MIRV",                price:7000, pack:2, kind:"mirv",  r:54,  dmg:70,  rank:5,
     desc:"Splits into five warheads at the top of its arc." },
-  { id:"level",  name:"Leveler",             price:8000, pack:2, kind:"level", r:72,  dmg:95,  rank:6,
+  { id:"level",  name:"Leveler",             price:8000, pack:1, kind:"level", r:72,  dmg:95,  rank:6,
     desc:"The moment it draws level with an opponent it turns and flies flat at them." },
-  { id:"plumb",  name:"Plumb Bomb",          price:8000, pack:2, kind:"plumb", r:72,  dmg:95,  rank:6,
+  { id:"plumb",  name:"Plumb Bomb",          price:8000, pack:1, kind:"plumb", r:72,  dmg:95,  rank:6,
     desc:"The moment it passes over an opponent it drops straight down onto them." },
   { id:"cri20",  name:"CRI 20/ND",           price:10000, pack:2, kind:"cri",  r:150, dmg:175, rank:6,
     desc:"The big CRI, non-destructive. Wrecks tanks and leaves the ground intact." },
@@ -743,6 +745,7 @@ function hudTurn() {
   $("who").style.color = t ? t.col : "var(--ink)";
   $("rnd").textContent = "Round " + round + "/" + roundsTotal;
   $("fire").disabled = !mine;
+  $("fire").style.background = t ? t.col : "var(--hot)";
   $("skip").disabled = !mine;
   $("menubtn").disabled = state === "setup";
   $("ang").disabled = $("pow").disabled = $("armbtn").disabled = !mine;
@@ -751,9 +754,14 @@ function hudTurn() {
   $("armbtn").innerHTML = "<span>" + w.name + "</span><i>" + (n === Infinity ? "\u221E" : n) + "</i>";
   hudRoster(); syncDials();
 }
+/* the dial reads 0 to the left and 180 to the right, the engine works the
+   other way round, so everything the player sees is mirrored here */
+const dialOf = t => 180 - t.angle;
+const angleFromDial = v => 180 - v;
+
 function syncDials() {
   const t = tanks[turn]; if (!t) return;
-  $("ang").value = Math.round(t.angle); $("angv").textContent = Math.round(t.angle) + "\u00B0";
+  $("ang").value = Math.round(dialOf(t)); $("angv").textContent = Math.round(dialOf(t)) + "\u00B0";
   $("pow").value = Math.round(t.power); $("powv").textContent = Math.round(t.power);
 }
 
@@ -822,6 +830,31 @@ function resumeGame(d) {
 }
 function clearSave() { store.clear(); savedAt = 0; }
 
+/* ================= sheet history =================
+   The menu and the arsenal are pushed onto the history stack, so the phone's
+   back gesture closes them instead of leaving the game. The armory and the
+   scoreboard are steps you must finish, so back is absorbed there. */
+let sheetOpen = null, popping = false;
+function pushSheet(name) {
+  sheetOpen = name;
+  try { history.pushState({ sheet: name }, ""); } catch (e) {}
+}
+function dropSheet() {
+  if (!sheetOpen) return;
+  sheetOpen = null;
+  if (popping) return;
+  try { if (history.state && history.state.sheet) history.back(); } catch (e) {}
+}
+addEventListener("popstate", () => {
+  popping = true;
+  if (sheetOpen === "menu") { sheetOpen = null; $("menu").classList.add("hide"); }
+  else if (sheetOpen === "pick") { sheetOpen = null; $("pick").classList.add("hide"); }
+  else if (state === "shop" || state === "board") {
+    try { history.pushState({ sheet: state }, ""); } catch (e) {}   // stay put
+  }
+  popping = false;
+});
+
 /* ================= menu ================= */
 function openMenu() {
   if (state === "setup") return;
@@ -836,8 +869,9 @@ function openMenu() {
     "<br>Screen sleep: <b>" + (wakeLock ? "held off" : awakeSupported() ? "not held" : "not supported here") + "</b>." +
     "<br><br>Resigning destroys your tank and forfeits the round. The rest of the match carries on.";
   $("menu").classList.remove("hide");
+  pushSheet("menu");
 }
-function closeMenu() { $("menu").classList.add("hide"); }
+function closeMenu() { $("menu").classList.add("hide"); dropSheet(); }
 function resign() {
   const t = tanks[turn];
   if (!t || t.hp <= 0) return;
@@ -994,16 +1028,19 @@ function renderShop(t) {
   const list = $("shoplist"); list.innerHTML = "";
   for (const w of WEAPONS) {
     if (w.price === 0) continue;
-    const owned = have(t, w.id), afford = t.cash >= w.price;
+    const owned = have(t, w.id);
+    const capped = w.auto && owned > 0;                    // one shield at a time
+    const afford = !capped && t.cash >= w.price;
     const row = document.createElement("div");
     row.className = "row" + (afford ? "" : " out");
     row.innerHTML = '<div class="info"><div class="ttl">' + w.name +
-      (owned ? '<u>' + owned + ' in stock</u>' : '') + '</div><div class="sub">' + w.desc + '</div></div>' +
+      (owned ? '<u>' + (w.auto ? "fitted" : owned + ' in stock') + '</u>' : '') +
+      '</div><div class="sub">' + w.desc + '</div></div>' +
       '<button class="buy' + (afford ? ' ok' : '') + '"' + (afford ? '' : ' disabled') + '>' +
-      money(w.price) + '<br>' + w.pack + (w.auto ? ' use' : ' shells') + '</button>';
+      (capped ? "Fitted" : money(w.price) + '<br>' + w.pack + (w.auto ? ' use' : ' shells')) + '</button>';
     row.querySelector("button").onclick = ev => {
       ev.stopPropagation();
-      if (t.cash < w.price) return;
+      if (capped || t.cash < w.price) return;
       t.cash -= w.price;
       t.ammo[w.id] = (t.ammo[w.id] || 0) + w.pack;
       renderShop(t); saveGame("shop");
@@ -1022,8 +1059,8 @@ function cpuBuy(t) {
     t.cash -= w.price;
     t.ammo[w.id] = (t.ammo[w.id] || 0) + w.pack;
   }
-  if (t.cash >= W.shield.price && Math.random() < (t.kind === "hard" ? 0.7 : 0.35)) {
-    t.cash -= W.shield.price; t.ammo.shield = (t.ammo.shield || 0) + W.shield.pack;
+  if (!(t.ammo.shield > 0) && t.cash >= W.shield.price && Math.random() < (t.kind === "hard" ? 0.7 : 0.35)) {
+    t.cash -= W.shield.price; t.ammo.shield = 1;
   }
   if (t.cash >= W.dirt.price && Math.random() < 0.4) {
     t.cash -= W.dirt.price; t.ammo.dirt = (t.ammo.dirt || 0) + W.dirt.pack;
@@ -1043,7 +1080,7 @@ function openPick() {
     row.className = "row" + (t.sel === w.id ? " sel" : "");
     row.innerHTML = '<div class="info"><div class="ttl">' + w.name + '<u>' +
       (n === Infinity ? "unlimited" : n + " left") + '</u></div><div class="sub">' + w.desc + '</div></div>';
-    row.onclick = () => { t.sel = w.id; $("pick").classList.add("hide"); hudTurn(); };
+    row.onclick = () => { t.sel = w.id; closePick(); hudTurn(); };
     list.appendChild(row);
   }
   if ((t.ammo.shield || 0) > 0) {
@@ -1052,9 +1089,11 @@ function openPick() {
     list.appendChild(d);
   }
   $("pick").classList.remove("hide");
+  pushSheet("pick");
 }
+function closePick() { $("pick").classList.add("hide"); dropSheet(); }
 $("armbtn").onclick = openPick;
-$("pickclose").onclick = () => $("pick").classList.add("hide");
+$("pickclose").onclick = closePick;
 
 /* ================= turn flow ================= */
 function startTurn() {
@@ -1105,7 +1144,8 @@ function skipTurn() {
   nextTurn();
 }
 function nextTurn() {
-  if (turnDamage >= 1) say("Dealt " + Math.round(turnDamage) + " damage, earned " + money(turnCash), 2000);
+  if (turnDamage >= 1) say("Dealt " + Math.round(turnDamage) + " damage" +
+    (turnCash ? ", earned " + money(turnCash) : ""), 2000);
   if (alive().length <= 1) return endRound();
   for (let k = 1; k <= tanks.length; k++) {
     const i = (turn + k) % tanks.length;
@@ -1120,9 +1160,8 @@ function endRound() {
   lastBoardSub = "Everyone is gone.";
   if (left.length === 1) {
     left[0].wins++;
-    const bonus = 500 * tanks.length;
-    left[0].cash += bonus;
-    lastBoardSub = left[0].name + " survives and takes " + money(bonus) + ".";
+    left[0].cash += WIN_BONUS;
+    lastBoardSub = left[0].name + " survives and takes " + money(WIN_BONUS) + ".";
   }
   showBoard();
   saveGame("board");
@@ -1132,15 +1171,14 @@ function showBoard() {
   const last = round >= roundsTotal;
   $("boardttl").textContent = last ? "Match over" : "Round " + round + " over";
   $("boardsub2").textContent = last ? "Final standings" : lastBoardSub;
-  const rank = tanks.slice().sort((a, b) => b.wins - a.wins || b.kills - a.kills || b.cash - a.cash);
+  const rank = tanks.slice().sort((a, b) => b.wins - a.wins || b.kills - a.kills);
   const list = $("boardlist"); list.innerHTML = "";
   rank.forEach((t, i) => {
     const d = document.createElement("div");
     d.className = "score"; d.style.setProperty("--c", t.col);
     d.innerHTML = '<div class="pos">' + (i + 1) + '</div><div class="nm">' + t.name + '</div>' +
-      '<div class="kv">rounds<b>' + t.wins + '</b></div>' +
       '<div class="kv">kills<b>' + t.kills + '</b></div>' +
-      '<div class="kv">cash<b>' + money(t.cash) + '</b></div>';
+      '<div class="kv big">rounds<b>' + t.wins + '</b></div>';
     list.appendChild(d);
   });
   $("boardnext").textContent = last ? "New match" : "Go to the armory";
@@ -1206,20 +1244,16 @@ function detonate(p) {
   else boom(p.x, p.y, 56, 45, p.own);
 }
 function payKill(killer, victim) {
-  if (!killer || killer === victim) return;
+  if (!killer || killer === victim) return;        // no bounty on yourself
   killer.roundKills++; killer.kills++;
-  const bonus = KILL_BASE * killer.roundKills;
-  killer.cash += bonus; turnCash += bonus;
-  say(killer.name + " knocked out " + victim.name + " \u2014 " + money(bonus), 2200);
+  killer.cash += KILL_BOUNTY; turnCash += KILL_BOUNTY;
+  say(killer.name + " knocked out " + victim.name + " \u2014 " + money(KILL_BOUNTY), 2200);
 }
 function killTank(t, owner, note) {
   if (t.hp <= 0 && t.dead) return;
   const took = t.hp;
   t.hp = 0; t.dead = true;
-  if (t.i !== owner) {
-    const cash = took * CASH_PER_HP;
-    tanks[owner].cash += cash; turnDamage += took; turnCash += cash;
-  }
+  if (t.i !== owner) turnDamage += took;
   payKill(tanks[owner], t);
   if (note) say(note, 1800);
   tankDied(t, owner);
@@ -1235,10 +1269,7 @@ function applyDamage(x, y, reach, dmg, owner, skip) {
     if (hit > 3 && absorb(t)) continue;                   // the deflector eats the whole blast
     const took = Math.min(t.hp, hit);
     t.hp = Math.max(0, t.hp - hit);
-    if (t.i !== owner) {
-      const cash = took * CASH_PER_HP;
-      tanks[owner].cash += cash; turnDamage += took; turnCash += cash;
-    }
+    if (t.i !== owner) turnDamage += took;
     if (t.hp <= 0 && !t.dead) {
       t.dead = true;
       payKill(tanks[owner], t);
@@ -1538,7 +1569,7 @@ function nudge(which, delta) {
   if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
   arrowT = 0;
   const t = tanks[turn];
-  if (which === "ang") t.angle = clamp(t.angle + delta, 0, 180);
+  if (which === "ang") t.angle = clamp(t.angle - delta, 0, 180);   // + tips the barrel right
   else t.power = clamp(t.power + delta, 5, 100);
   syncDials();
 }
@@ -1562,7 +1593,7 @@ holdButton("powdn", "pow", -1);
 $("ang").addEventListener("input", e => {
   if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
   arrowT = 0;
-  tanks[turn].angle = +e.target.value;
+  tanks[turn].angle = angleFromDial(+e.target.value);
   $("angv").textContent = e.target.value + "\u00B0";
 });
 $("pow").addEventListener("input", e => {
