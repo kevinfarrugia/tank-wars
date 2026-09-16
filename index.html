@@ -219,7 +219,7 @@
         <div class="cols">
           <div>
             <div class="frow"><span>Tanks</span><div class="seg" id="pcount"></div></div>
-            <div class="frow"><span>Rounds</span><div class="seg" id="rcount"></div></div>
+            <div class="frow"><span>First to</span><div class="seg" id="rcount"></div></div>
             <div class="note" id="storenote"></div>
           </div>
           <div id="plist"></div>
@@ -310,7 +310,7 @@ const Y = y => worldH - y;
 const money = n => "$" + Math.round(n).toLocaleString("en-US");
 
 /* ================= saved game ================= */
-const SAVE_KEY = "tankwars.save.v2";
+const SAVE_KEY = "tankwars.save.v3";
 const store = (() => {
   let mem = null, ok = false;
   try {
@@ -383,7 +383,7 @@ let T = new Float32Array(WW + 1);        // bedrock height per column
 let SURF = new Float32Array(WW + 1);     // bedrock combined with the dirt balls
 let blobs = [];
 let tanks = [], turn = 0, wind = 0, windTurns = 0;
-let round = 1, roundsTotal = 5;
+let round = 1, winTarget = 5;
 let state = "setup";
 let shells = [], parts = [], smoke = [], puffs = [], shocks = [], balls = [], flashes = [], pending = [];
 let settleClock = 0, flyClock = 0, sky = null, shake = 0;
@@ -743,7 +743,7 @@ function hudTurn() {
   const t = tanks[turn], mine = state === "aim" && t && !t.cpu;
   $("who").innerHTML = t ? t.name + "<b>" + money(t.cash) + "</b>" : "&nbsp;";
   $("who").style.color = t ? t.col : "var(--ink)";
-  $("rnd").textContent = "Round " + round + "/" + roundsTotal;
+  $("rnd").textContent = "Round " + round + " \u2014 first to " + winTarget;
   $("fire").disabled = !mine;
   $("fire").style.background = t ? t.col : "var(--hot)";
   $("skip").disabled = !mine;
@@ -781,7 +781,7 @@ function saveGame(p) {
   phase = p || phase;
   savedAt = Date.now();
   const d = {
-    v: 2, phase, round, roundsTotal, turn, wind, windTurns, worldH,
+    v: 3, phase, round, winTarget, turn, wind, windTurns, worldH,
     cfgCount, cfgKind: cfgKind.slice(), cfgName: cfgName.slice(), shopQueue: shopQueue.slice(),
     boardSub: lastBoardSub, when: savedAt,
     T: Array.prototype.map.call(T, v => Math.round(v * 10) / 10),
@@ -798,13 +798,13 @@ function loadGame() {
     const raw = store.get();
     if (!raw) return null;
     const d = JSON.parse(raw);
-    return (d && d.v === 2 && d.tanks && d.tanks.length) ? d : null;
+    return (d && d.v === 3 && d.tanks && d.tanks.length) ? d : null;
   } catch (e) { return null; }
 }
 function resumeGame(d) {
   cfgCount = d.cfgCount; cfgKind = d.cfgKind.slice();
   cfgName = (d.cfgName || cfgName).slice();
-  roundsTotal = d.roundsTotal; round = d.round;
+  winTarget = d.winTarget; round = d.round;
   buildTanks();
   d.tanks.forEach((s, i) => {
     const t = tanks[i]; if (!t) return;
@@ -962,8 +962,8 @@ function buildSetup() {
   const rc = $("rcount"); rc.innerHTML = "";
   for (const n of [3, 5, 9]) {
     const b = document.createElement("button");
-    b.textContent = n; b.className = n === roundsTotal ? "on" : "";
-    b.onclick = () => { roundsTotal = n; buildSetup(); };
+    b.textContent = n; b.className = n === winTarget ? "on" : "";
+    b.onclick = () => { winTarget = n; buildSetup(); };
     rc.appendChild(b);
   }
   const pl = $("plist"); pl.innerHTML = "";
@@ -1016,7 +1016,7 @@ function nextShopper() {
   const t = tanks[shopQueue[0]];
   $("shop").style.setProperty("--c", t.col);
   $("buyname").textContent = t.name;
-  $("buyersub").textContent = "Armory \u2014 round " + round + " of " + roundsTotal +
+  $("buyersub").textContent = "Armory \u2014 round " + round + ", first to " + winTarget + " wins" +
     (shopQueue.length > 1 ? " \u2014 " + (shopQueue.length - 1) + " still to shop" : "");
   $("shopdone").textContent = shopQueue.length > 1 ? "Done, next player" : "Start round";
   renderShop(t);
@@ -1168,9 +1168,12 @@ function endRound() {
 }
 function showBoard() {
   state = "board";
-  const last = round >= roundsTotal;
-  $("boardttl").textContent = last ? "Match over" : "Round " + round + " over";
-  $("boardsub2").textContent = last ? "Final standings" : lastBoardSub;
+  const champ = tanks.filter(t => t.wins >= winTarget).sort((a, b) => b.wins - a.wins)[0];
+  const last = !!champ;
+  $("boardttl").textContent = last ? champ.name + " wins the match" : "Round " + round + " over";
+  $("boardsub2").textContent = last
+    ? "First to " + winTarget + " rounds"
+    : lastBoardSub + " Needs " + winTarget + " to take the match.";
   const rank = tanks.slice().sort((a, b) => b.wins - a.wins || b.kills - a.kills);
   const list = $("boardlist"); list.innerHTML = "";
   rank.forEach((t, i) => {
@@ -1654,7 +1657,7 @@ $("storenote").innerHTML = (store.ok
 if (saved) {
   savedAt = saved.when || 0;
   $("resumebtn").style.display = "";
-  $("resumebtn").innerHTML = "Resume \u2014 round " + saved.round + " of " + saved.roundsTotal;
+  $("resumebtn").innerHTML = "Resume \u2014 round " + saved.round + ", first to " + saved.winTarget;
   $("resumebtn").onclick = () => { goFullscreen(); keepAwake(); $("setup").classList.add("hide"); resumeGame(saved); };
 }
 if (isInstalled()) { lockLandscape(); $("installbtn").style.display = "none"; }
