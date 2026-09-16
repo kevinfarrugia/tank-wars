@@ -66,43 +66,56 @@
   .chip .mini i{display:block;height:100%;background:var(--c);transition:width .25s ease}
   .chip.on .mini{box-shadow:0 0 0 1px var(--c)}
 
-  #field{position:relative;flex:1 1 auto;min-height:0}
+  #main{flex:1 1 auto;display:flex;min-height:0}
+  #field{position:relative;flex:1 1 auto;min-width:0}
   canvas{display:block;width:100%;height:100%;touch-action:none}
   #msg{position:absolute;left:50%;top:10px;transform:translateX(-50%);padding:5px 13px;border-radius:999px;
     background:rgba(18,13,38,.85);border:1px solid var(--edge);font-size:13px;font-weight:600;
     white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none}
   #msg.on{opacity:1}
 
-  /* ---- one-row controls for landscape ---- */
-  #ctrl{flex:0 0 auto;display:flex;gap:8px;align-items:center;
-    padding:7px 10px;background:var(--panel);border-top:1px solid var(--edge)}
-  #armbtn{display:flex;align-items:center;flex:1 1 150px;min-width:110px;background:#1d1640;
-    border:1px solid var(--edge);border-radius:10px;color:var(--ink);font-family:inherit;
-    font-size:14px;font-weight:600;padding:8px 10px;cursor:pointer;text-align:left}
+  /* ---- controls live down the right edge, under the thumb ---- */
+  #ctrl{flex:0 0 152px;display:flex;flex-direction:column;gap:6px;
+    padding:6px 8px 8px;background:var(--panel);border-left:1px solid var(--edge)}
+  #armbtn{display:flex;align-items:center;width:100%;background:#1d1640;
+    border:1px solid var(--edge);border-radius:9px;color:var(--ink);font-family:inherit;
+    font-size:13px;font-weight:600;padding:7px 9px;cursor:pointer;text-align:left}
   #armbtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #armbtn i{font-style:normal;color:var(--dim);font-weight:500;margin-left:auto;padding-left:7px;
-    white-space:nowrap;font-size:12px}
-  #skip{flex:0 0 52px;background:#1d1640;border:1px solid var(--edge);border-radius:10px;color:var(--dim);
-    font-family:inherit;font-size:13px;font-weight:600;padding:8px 2px;cursor:pointer}
-  .dial{flex:1 1 170px;display:flex;align-items:center;gap:7px;min-width:130px}
-  .dial label{flex:0 0 auto;font-size:12px;color:var(--dim);font-weight:500}
-  .dial output{flex:0 0 40px;font-size:15px;font-weight:700;text-align:right}
-  input[type=range]{-webkit-appearance:none;appearance:none;flex:1 1 auto;min-width:0;height:30px;background:transparent;margin:0}
-  input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#2b2150}
-  input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:#2b2150}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;
-    margin-top:-10px;background:var(--ink);border:3px solid var(--panel);box-shadow:0 1px 4px rgba(0,0,0,.5)}
-  input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--ink);
+  #armbtn i{font-style:normal;color:var(--dim);font-weight:500;margin-left:auto;padding-left:6px;
+    white-space:nowrap;font-size:11px}
+  .dial{display:flex;flex-direction:column;gap:2px}
+  .dhead{display:flex;align-items:baseline}
+  .dhead label{font-size:12px;color:var(--dim);font-weight:500}
+  .dhead output{margin-left:auto;font-size:15px;font-weight:700}
+  .drow{display:flex;align-items:center;gap:4px}
+  .nudge{flex:0 0 28px;height:28px;padding:0;background:#1d1640;border:1px solid var(--edge);
+    border-radius:8px;color:var(--ink);font-family:inherit;font-size:16px;font-weight:700;
+    line-height:1;cursor:pointer}
+  .nudge:active{background:#2a2056}
+  input[type=range]{-webkit-appearance:none;appearance:none;flex:1 1 auto;min-width:0;height:28px;background:transparent;margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:#2b2150}
+  input[type=range]::-moz-range-track{height:5px;border-radius:3px;background:#2b2150}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+    margin-top:-8.5px;background:var(--ink);border:3px solid var(--panel);box-shadow:0 1px 4px rgba(0,0,0,.5)}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--ink);
     border:3px solid var(--panel);box-shadow:0 1px 4px rgba(0,0,0,.5)}
   input[type=range]:disabled{opacity:.45}
-  input[type=range]:focus-visible{outline:2px solid var(--hot);outline-offset:4px;border-radius:6px}
-  #fire{flex:0 0 88px;border:0;border-radius:12px;cursor:pointer;background:var(--hot);
-    color:#2a1605;font-family:inherit;font-size:18px;font-weight:700;padding:10px 0}
+  input[type=range]:focus-visible{outline:2px solid var(--hot);outline-offset:3px;border-radius:6px}
+  #fire{flex:1 1 auto;min-height:56px;border:0;border-radius:12px;cursor:pointer;background:var(--hot);
+    color:#2a1605;font-family:inherit;font-size:19px;font-weight:700}
   #fire:active{transform:translateY(1px)}
   #fire:disabled{opacity:.35}
+  #skip{flex:0 0 30px;background:#1d1640;border:1px solid var(--edge);border-radius:9px;color:var(--dim);
+    font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  #armbtn:disabled,#skip:disabled,.nudge:disabled{opacity:.4}
   button:focus-visible{outline:2px solid var(--hot);outline-offset:3px}
+  @media (max-height:360px){
+    #ctrl{flex-basis:136px;gap:4px;padding:4px 6px 6px}
+    #fire{min-height:44px;font-size:17px}
+    .nudge{height:26px;flex-basis:26px}
+  }
 
-  .sheet{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
+  .sheet{position:fixed;inset:0;z-index:6;display:flex;flex-direction:column;
     background:rgba(12,8,28,.95);backdrop-filter:blur(4px);padding:12px 16px}
   .sheet.hide{display:none}
   .scroll{flex:1 1 auto;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
@@ -192,6 +205,7 @@
     <div id="roster"></div>
   </div>
 
+  <div id="main">
   <div id="field">
     <canvas id="game"></canvas>
     <div id="msg"></div>
@@ -250,15 +264,26 @@
   </div>
 
   <div id="ctrl">
-    <button id="armbtn"><span>Incinerator</span><i>unlimited</i></button>
-    <button id="skip">Skip</button>
-    <div class="dial"><label for="ang">Angle</label>
-      <input id="ang" type="range" min="0" max="180" step="1" value="45" aria-label="Turret angle">
-      <output id="angv">45&deg;</output></div>
-    <div class="dial"><label for="pow">Power</label>
-      <input id="pow" type="range" min="5" max="100" step="1" value="65" aria-label="Shot power">
-      <output id="powv">65</output></div>
+    <button id="armbtn"><span>Incinerator</span><i>&#8734;</i></button>
+    <div class="dial">
+      <div class="dhead"><label for="ang">Angle</label><output id="angv">45&deg;</output></div>
+      <div class="drow">
+        <button class="nudge" id="angdn" aria-label="Lower angle">&#8722;</button>
+        <input id="ang" type="range" min="0" max="180" step="1" value="45" aria-label="Turret angle">
+        <button class="nudge" id="angup" aria-label="Raise angle">+</button>
+      </div>
+    </div>
+    <div class="dial">
+      <div class="dhead"><label for="pow">Power</label><output id="powv">65</output></div>
+      <div class="drow">
+        <button class="nudge" id="powdn" aria-label="Less power">&#8722;</button>
+        <input id="pow" type="range" min="5" max="100" step="1" value="65" aria-label="Shot power">
+        <button class="nudge" id="powup" aria-label="More power">+</button>
+      </div>
+    </div>
     <button id="fire">Fire</button>
+    <button id="skip">Skip turn</button>
+  </div>
   </div>
 </div>
 
@@ -313,12 +338,20 @@ const WEAPONS = [
     desc:"The same shell with a much heavier charge." },
   { id:"cri4",   name:"CRI 4/D",             price:1800, pack:4, kind:"cri",   r:62,  dmg:80,  rank:3,
     desc:"Fast round on a flat trajectory. Digs its own crater." },
+  { id:"shield", name:"Deflector Shield",    price:1500, pack:1, kind:"shield",r:0,   dmg:0,   rank:0, auto:true,
+    desc:"One use. Turns away a direct hit and soaks the blast that comes with it." },
+  { id:"ricochet",name:"Ricochet",           price:2400, pack:3, kind:"ricochet", r:70, dmg:85, rank:4,
+    desc:"Bounces off the walls and the ceiling instead of leaving the map." },
   { id:"kilo20", name:"20 Kilo Nuke",        price:5000, pack:2, kind:"nuke",  r:100, dmg:120, rank:4,
     desc:"A small warhead with a very generous blast radius." },
   { id:"cri8",   name:"CRI 8/D",             price:6000, pack:3, kind:"cri",   r:98,  dmg:130, rank:5,
     desc:"Heavier CRI. Still arrives before the wind can do much to it." },
   { id:"mirv",   name:"MIRV",                price:7000, pack:2, kind:"mirv",  r:54,  dmg:70,  rank:5,
     desc:"Splits into five warheads at the top of its arc." },
+  { id:"level",  name:"Leveler",             price:8000, pack:2, kind:"level", r:72,  dmg:95,  rank:6,
+    desc:"The moment it draws level with an opponent it turns and flies flat at them." },
+  { id:"plumb",  name:"Plumb Bomb",          price:8000, pack:2, kind:"plumb", r:72,  dmg:95,  rank:6,
+    desc:"The moment it passes over an opponent it drops straight down onto them." },
   { id:"cri20",  name:"CRI 20/ND",           price:10000, pack:2, kind:"cri",  r:150, dmg:175, rank:6,
     desc:"The big CRI, non-destructive. Wrecks tanks and leaves the ground intact." },
   { id:"meg5",   name:"5 Meg Nuke",          price:14000, pack:1, kind:"nuke", r:190, dmg:200, rank:7,
@@ -327,6 +360,8 @@ const WEAPONS = [
 const W = {};
 for (const w of WEAPONS) W[w.id] = w;
 const MIRVLET = { id:"mirvlet", name:"MIRV warhead", kind:"blast", r:56, dmg:75, rank:0 };
+const BOMBLET = { id:"bomblet", name:"bomblet", kind:"blast", r:46, dmg:42, rank:0 };
+const DEATH_FX = ["small", "medium", "cluster", "fizzle"];
 
 const COLORS = [
   ["#4fd1e0","#1d6e7c"], ["#ffcf4d","#8a6410"], ["#ff7a6b","#8e3226"], ["#9be36d","#417a2c"],
@@ -382,7 +417,16 @@ function makeTerrain() {
   }
   for (let x = 0; x <= WW; x++) {
     const t = x / WW * n, i = Math.floor(t), f = t - i;
-    T[x] = clamp(h[i] + (h[Math.min(n, i + 1)] - h[i]) * f, worldH * 0.05, worldH * 0.78);
+    T[x] = h[i] + (h[Math.min(n, i + 1)] - h[i]) * f;
+  }
+  // two rolling waves laid over the fractal, so the ground undulates
+  const a1 = worldH * rnd(0.07, 0.13), f1 = rnd(1.6, 3.4), p1 = rnd(0, 7);
+  const a2 = worldH * rnd(0.04, 0.09), f2 = rnd(4.0, 8.5), p2 = rnd(0, 7);
+  const a3 = worldH * rnd(0.02, 0.05), f3 = rnd(9, 15), p3 = rnd(0, 7);
+  for (let x = 0; x <= WW; x++) {
+    const u = x / WW * Math.PI * 2;
+    T[x] = clamp(T[x] + Math.sin(u * f1 + p1) * a1 + Math.sin(u * f2 + p2) * a2
+      + Math.sin(u * f3 + p3) * a3, worldH * 0.05, worldH * 0.80);
   }
   const c = T.slice();                         // one light pass only, so peaks survive
   for (let x = 1; x < WW; x++) T[x] = (c[x - 1] + 2 * c[x] + c[x + 1]) / 4;
@@ -597,6 +641,12 @@ function paint() {
 }
 function drawTank(t) {
   ctx.save(); ctx.translate(t.x, Y(t.y));
+  if ((t.ammo.shield || 0) > 0) {
+    ctx.globalAlpha = 0.45 + 0.15 * Math.sin(performance.now() / 320);
+    ctx.strokeStyle = "#cfe8ff"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, -10, 25, 0, 7); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   const a = t.angle * Math.PI / 180;
   ctx.strokeStyle = t.col; ctx.lineWidth = 5; ctx.lineCap = "round";
   ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(Math.cos(a) * 24, -10 - Math.sin(a) * 24); ctx.stroke();
@@ -696,8 +746,9 @@ function hudTurn() {
   $("skip").disabled = !mine;
   $("menubtn").disabled = state === "setup";
   $("ang").disabled = $("pow").disabled = $("armbtn").disabled = !mine;
+  for (const id of ["angup", "angdn", "powup", "powdn"]) $(id).disabled = !mine;
   const w = W[t ? t.sel : "incin"], n = t ? have(t, w.id) : 0;
-  $("armbtn").innerHTML = "<span>" + w.name + "</span><i>" + (n === Infinity ? "\u221E" : n + " left") + "</i>";
+  $("armbtn").innerHTML = "<span>" + w.name + "</span><i>" + (n === Infinity ? "\u221E" : n) + "</i>";
   hudRoster(); syncDials();
 }
 function syncDials() {
@@ -793,7 +844,7 @@ function resign() {
   closeMenu();
   t.hp = 0; t.dead = true;
   say(t.name + " resigns", 2200);
-  pending.push({ x: t.x, y: t.y + 8, r: 78, dmg: 60, own: t.i, wait: 0.2 });
+  tankDied(t, t.i);
   turnDamage = 0; turnCash = 0;
   hudTurn();
   state = "settle"; settleClock = 0;
@@ -949,7 +1000,7 @@ function renderShop(t) {
     row.innerHTML = '<div class="info"><div class="ttl">' + w.name +
       (owned ? '<u>' + owned + ' in stock</u>' : '') + '</div><div class="sub">' + w.desc + '</div></div>' +
       '<button class="buy' + (afford ? ' ok' : '') + '"' + (afford ? '' : ' disabled') + '>' +
-      money(w.price) + '<br>' + w.pack + ' shells</button>';
+      money(w.price) + '<br>' + w.pack + (w.auto ? ' use' : ' shells') + '</button>';
     row.querySelector("button").onclick = ev => {
       ev.stopPropagation();
       if (t.cash < w.price) return;
@@ -971,6 +1022,9 @@ function cpuBuy(t) {
     t.cash -= w.price;
     t.ammo[w.id] = (t.ammo[w.id] || 0) + w.pack;
   }
+  if (t.cash >= W.shield.price && Math.random() < (t.kind === "hard" ? 0.7 : 0.35)) {
+    t.cash -= W.shield.price; t.ammo.shield = (t.ammo.shield || 0) + W.shield.pack;
+  }
   if (t.cash >= W.dirt.price && Math.random() < 0.4) {
     t.cash -= W.dirt.price; t.ammo.dirt = (t.ammo.dirt || 0) + W.dirt.pack;
   }
@@ -984,13 +1038,18 @@ function openPick() {
   const list = $("picklist"); list.innerHTML = "";
   for (const w of WEAPONS) {
     const n = have(t, w.id);
-    if (n <= 0) continue;
+    if (n <= 0 || w.auto) continue;
     const row = document.createElement("div");
     row.className = "row" + (t.sel === w.id ? " sel" : "");
     row.innerHTML = '<div class="info"><div class="ttl">' + w.name + '<u>' +
       (n === Infinity ? "unlimited" : n + " left") + '</u></div><div class="sub">' + w.desc + '</div></div>';
     row.onclick = () => { t.sel = w.id; $("pick").classList.add("hide"); hudTurn(); };
     list.appendChild(row);
+  }
+  if ((t.ammo.shield || 0) > 0) {
+    const d = document.createElement("div"); d.className = "grp";
+    d.textContent = "Deflector Shield is up. It uses itself on the next hit.";
+    list.appendChild(d);
   }
   $("pick").classList.remove("hide");
 }
@@ -1102,6 +1161,50 @@ function smokeBurst(x, y, r, n, alpha) {
   }
   if (puffs.length > 300) puffs.splice(0, puffs.length - 300);
 }
+/* one-use deflector: eats a whole hit, direct or blast */
+function absorb(t) {
+  if ((t.ammo.shield || 0) <= 0) return false;
+  t.ammo.shield--;
+  if (t.ammo.shield <= 0) delete t.ammo.shield;
+  sfx("boom", 26);
+  shocks.push({ x: t.x, y: t.y + 10, r: 70, life: 1, col: "#cfe8ff" });
+  for (let i = 0; i < 22; i++) {
+    const a = rnd(0, Math.PI * 2);
+    parts.push({ x: t.x + Math.cos(a) * 20, y: t.y + 10 + Math.sin(a) * 20,
+      vx: Math.cos(a) * rnd(60, 190), vy: Math.sin(a) * rnd(60, 190) + 40,
+      life: rnd(.4, .9), s: rnd(2, 4), col: "#cfe8ff" });
+  }
+  say(t.name + " deflected it", 1900);
+  hudTurn();
+  return true;
+}
+function tankDied(t, owner) {
+  const fx = pick(DEATH_FX);
+  pending.push({ x: t.x, y: t.y + 8, own: (owner == null ? t.i : owner), wait: 0.28, fx });
+}
+function detonate(p) {
+  if (p.fx === "fizzle") {
+    sfx("boom", 18);
+    smokeBurst(p.x, p.y, 42, 12, 0.5);
+    for (let i = 0; i < 10; i++) parts.push({ x: p.x, y: p.y, vx: rnd(-40, 40), vy: rnd(10, 60),
+      life: rnd(.4, .9), s: rnd(2, 4), col: "#8a6a4a" });
+    say("Fizzle", 1400);
+    return;
+  }
+  if (p.fx === "cluster") {
+    say("Cluster", 1400);
+    boom(p.x, p.y, 44, 34, p.own);
+    for (let i = 0; i < 7; i++) {
+      const a = rnd(0.25, Math.PI - 0.25), sp = rnd(170, 340);
+      shells.push({ x: p.x, y: p.y + 8, px: p.x, py: p.y + 8,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t: 0, w: BOMBLET, own: p.own });
+    }
+    if (state === "settle") { state = "fly"; flyClock = 0; }
+    return;
+  }
+  if (p.fx === "medium") { say("Secondary blast", 1400); boom(p.x, p.y, 108, 95, p.own); }
+  else boom(p.x, p.y, 56, 45, p.own);
+}
 function payKill(killer, victim) {
   if (!killer || killer === victim) return;
   killer.roundKills++; killer.kills++;
@@ -1119,16 +1222,17 @@ function killTank(t, owner, note) {
   }
   payKill(tanks[owner], t);
   if (note) say(note, 1800);
-  pending.push({ x: t.x, y: t.y + 8, r: 78, dmg: 60, own: t.i, wait: 0.25 });
+  tankDied(t, owner);
   hudTurn();
 }
-function applyDamage(x, y, reach, dmg, owner) {
+function applyDamage(x, y, reach, dmg, owner, skip) {
   for (const t of tanks) {
-    if (t.hp <= 0) continue;
+    if (t.hp <= 0 || t === skip) continue;
     const d = Math.hypot(t.x - x, (t.y + 8) - y);
     if (d >= reach) continue;
     const hit = dmg * Math.pow(1 - d / reach, FALLOFF);   // near misses hurt badly
     if (hit <= 0.5) continue;
+    if (hit > 3 && absorb(t)) continue;                   // the deflector eats the whole blast
     const took = Math.min(t.hp, hit);
     t.hp = Math.max(0, t.hp - hit);
     if (t.i !== owner) {
@@ -1138,7 +1242,7 @@ function applyDamage(x, y, reach, dmg, owner) {
     if (t.hp <= 0 && !t.dead) {
       t.dead = true;
       payKill(tanks[owner], t);
-      pending.push({ x: t.x, y: t.y + 8, r: 78, dmg: 60, own: t.i, wait: 0.25 });
+      tankDied(t, owner);
     }
   }
   hudTurn();
@@ -1159,7 +1263,7 @@ function boom(x, y, r, dmg, owner, opts) {
   }
   smokeBurst(x, y, r, clamp(Math.round(r / 5), 6, 26), 0.6);
   if (!opts.noCarve) carve(x, y, r * 0.85);
-  if (dmg > 0) applyDamage(x, y, r * 1.15, dmg, owner);
+  if (dmg > 0) applyDamage(x, y, r * 1.15, dmg, owner, opts.skip);
   seatTanks();
 }
 function mushroom(x, y, r) {
@@ -1278,7 +1382,7 @@ function step(dt) {
   for (let i = pending.length - 1; i >= 0; i--) {
     const p = pending[i];
     p.wait -= dt;
-    if (p.wait <= 0) { pending.splice(i, 1); boom(p.x, p.y, p.r, p.dmg, p.own); }
+    if (p.wait <= 0) { pending.splice(i, 1); detonate(p); }
   }
   for (let i = parts.length - 1; i >= 0; i--) {
     const p = parts[i];
@@ -1318,7 +1422,7 @@ function step(dt) {
           t.y = g; t.vy = 0;
           if (drop > 3) {
             t.hp = Math.max(0, t.hp - drop);
-            if (t.hp <= 0 && !t.dead) { t.dead = true; pending.push({ x: t.x, y: t.y + 8, r: 78, dmg: 60, own: t.i, wait: 0.2 }); }
+            if (t.hp <= 0 && !t.dead) { t.dead = true; tankDied(t, t.i); }
             hudTurn();
           }
         }
@@ -1338,8 +1442,45 @@ function stepShells(dt) {
     for (let i = shells.length - 1; i >= 0; i--) {
       const s = shells[i];
       s.px = s.x; s.py = s.y;
-      s.vx += wind * h; s.vy -= G * h;
+      if (!s.flat) s.vx += wind * h;
+      if (!s.flat) s.vy -= G * h;
       s.x += s.vx * h; s.y += s.vy * h; s.t += h;
+
+      if (s.w.kind === "ricochet" && (s.bounces || 0) < 6) {       // bounces off the frame
+        if (s.x < 5) { s.x = 5; s.vx = Math.abs(s.vx) * 0.94; s.bounces = (s.bounces || 0) + 1; }
+        else if (s.x > WW - 5) { s.x = WW - 5; s.vx = -Math.abs(s.vx) * 0.94; s.bounces = (s.bounces || 0) + 1; }
+        if (s.y > worldH - 5 && s.vy > 0) { s.y = worldH - 5; s.vy = -Math.abs(s.vy) * 0.94; s.bounces = (s.bounces || 0) + 1; }
+        if (s.bounces !== s.rang) {
+          s.rang = s.bounces;
+          sfx("fire");
+          shocks.push({ x: s.x, y: s.y, r: 34, life: 1, col: "#9ef2ff" });
+        }
+      }
+      if (s.w.kind === "level" && !s.locked && s.t > 0.12) {       // turns flat when level with a foe
+        for (const t of tanks) {
+          if (t.hp <= 0 || t.i === s.own) continue;
+          if (Math.abs(s.y - (t.y + 8)) < 7) {
+            s.locked = true; s.flat = true;
+            const sp = Math.max(340, Math.hypot(s.vx, s.vy));
+            s.vx = Math.sign(t.x - s.x || 1) * sp; s.vy = 0;
+            s.y = t.y + 8;
+            shocks.push({ x: s.x, y: s.y, r: 40, life: 1, col: "#ff9ad5" });
+            break;
+          }
+        }
+      }
+      if (s.w.kind === "plumb" && !s.locked && s.t > 0.12) {       // drops when it passes over a foe
+        for (const t of tanks) {
+          if (t.hp <= 0 || t.i === s.own) continue;
+          if (Math.abs(s.x - t.x) < 7) {
+            s.locked = true; s.flat = true;
+            s.x = t.x; s.vx = 0;
+            s.vy = -Math.max(360, Math.abs(s.vy));
+            shocks.push({ x: s.x, y: s.y, r: 40, life: 1, col: "#ff9ad5" });
+            break;
+          }
+        }
+      }
 
       if (s.w.kind === "mirv" && !s.split && s.vy <= 0) {   // splits at the top of the arc
         s.split = true;
@@ -1357,8 +1498,11 @@ function stepShells(dt) {
       }
       if (struck) {
         shells.splice(i, 1);
-        killTank(struck, s.own, "Direct hit \u2014 " + struck.name + " destroyed");
-        boom(s.x, s.y, s.w.r, s.w.dmg, s.own, { noCarve: s.w.id === "cri20" });
+        const deflected = absorb(struck);
+        if (!deflected) killTank(struck, s.own, "Direct hit \u2014 " + struck.name + " destroyed");
+        boom(s.x, s.y, s.w.r, s.w.dmg, s.own, {
+          noCarve: s.w.id === "cri20", skip: deflected ? struck : null
+        });
         if (s.w.kind === "nuke") mushroom(s.x, s.y, s.w.r);
         continue;
       }
@@ -1389,6 +1533,32 @@ function frame(now) {
 }
 
 /* ================= input ================= */
+/* the nudge buttons: one step per tap, or hold to run */
+function nudge(which, delta) {
+  if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
+  arrowT = 0;
+  const t = tanks[turn];
+  if (which === "ang") t.angle = clamp(t.angle + delta, 0, 180);
+  else t.power = clamp(t.power + delta, 5, 100);
+  syncDials();
+}
+function holdButton(id, which, delta) {
+  const el = $(id);
+  let timer = null, tick = null;
+  const stop = () => { clearTimeout(timer); clearInterval(tick); timer = tick = null; };
+  el.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    if (el.disabled) return;
+    nudge(which, delta);
+    timer = setTimeout(() => { tick = setInterval(() => nudge(which, delta), 55); }, 380);
+  }, { passive: false });
+  for (const ev of ["pointerup", "pointercancel", "pointerleave"]) el.addEventListener(ev, stop);
+}
+holdButton("angup", "ang", 1);
+holdButton("angdn", "ang", -1);
+holdButton("powup", "pow", 1);
+holdButton("powdn", "pow", -1);
+
 $("ang").addEventListener("input", e => {
   if (state !== "aim" || !tanks[turn] || tanks[turn].cpu) return;
   arrowT = 0;
